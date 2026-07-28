@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-navy: #1a2744;
+  --color-navy-light: #2a3f6b;
+  --color-lime: #84bd00;
+  --color-lime-bright: #a8d600;
+  --color-teal: #00a8b5;
+  --color-teal-deep: #007a8a;
+  --color-surface: #f8faf6;
+  --color-surface-elevated: #ffffff;
+  --color-muted: #64748b;
+  --color-border: #e2e8f0;
+
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-surface text-navy antialiased;
+    font-family: var(--font-sans);
+  }
+
+  input,
+  button {
+    font-family: inherit;
+  }
+}
+
+@layer utilities {
+  .gradient-brand {
+    background: linear-gradient(135deg, var(--color-lime) 0%, var(--color-teal) 100%);
+  }
+
+  .gradient-brand-text {
+    background: linear-gradient(135deg, var(--color-lime-bright) 0%, var(--color-teal) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .gradient-line {
+    background: linear-gradient(90deg, var(--color-lime) 0%, var(--color-teal) 100%);
+  }
+}
