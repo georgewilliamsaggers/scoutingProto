@@ -4,13 +4,13 @@
   --color-navy: #1a2744;
   --color-navy-light: #2a3f6b;
   --color-lime: #84bd00;
-  --color-lime-bright: #a8d600;
+  --color-lime-bright: #a8d610;
   --color-teal: #00a8b5;
   --color-teal-deep: #007a8a;
   --color-surface: #f8faf6;
   --color-surface-elevated: #ffffff;
   --color-muted: #64748b;
-  --color-border: #e2e8f0;
+  --color-border: #e2e9f0;
 
   --font-sans: var(--font-inter), system-ui, sans-serif;
 }
@@ -46,4 +46,94 @@
   .gradient-line {
     background: linear-gradient(90deg, var(--color-lime) 0%, var(--color-teal) 100%);
   }
+}
+
+.disease-scale-slider::-webkit-slider-thumb {
+  appearance: none;
+  height: 1.5rem;
+  width: 1.5rem;
+  border-radius: 9999px;
+  border: 3px solid #e87722;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(26, 39, 68, 0.15);
+  margin-top: -0.625rem;
+}
+
+.disease-scale-slider::-moz-range-thumb {
+  height: 1.5rem;
+  width: 1.5rem;
+  border-radius: 9999px;
+  border: 3px solid #e87722;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(26, 39, 68, 0.15);
+}
+
+.disease-scale-slider::-webkit-slider-runnable-track {
+  appearance: none;
+  background: transparent;
+}
+
+.disease-scale-slider::-moz-range-track {
+  background: transparent;
+  border: none;
+}
+
+.weed-scale-slider::-webkit-slider-thumb {
+  appearance: none;
+  height: 1.75rem;
+  width: 1.75rem;
+  border-radius: 9999px;
+  border: 3px solid #84bd00;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(26, 39, 68, 0.15);
+  margin-top: -0.5625rem;
+}
+
+.weed-scale-slider::-moz-range-thumb {
+  height: 1.75rem;
+  width: 1.75rem;
+  border-radius: 9999px;
+  border: 3px solid #84bd00;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(26, 39, 68, 0.15);
+}
+
+.weed-scale-slider::-webkit-slider-runnable-track {
+  appearance: none;
+  background: transparent;
+}
+
+.weed-scale-slider::-moz-range-track {
+  background: transparent;
+  border: none;
+}
+
+.moisture-scale-slider::-webkit-slider-thumb {
+  appearance: none;
+  height: 1.75rem;
+  width: 1.75rem;
+  border-radius: 9999px;
+  border: 3px solid #84bd00;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(26, 39, 68, 0.15);
+  margin-top: -0.5625rem;
+}
+
+.moisture-scale-slider::-moz-range-thumb {
+  height: 1.75rem;
+  width: 1.75rem;
+  border-radius: 9999px;
+  border: 3px solid #84bd00;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(26, 39, 68, 0.15);
+}
+
+.moisture-scale-slider::-webkit-slider-runnable-track {
+  appearance: none;
+  background: transparent;
+}
+
+.moisture-scale-slider::-moz-range-track {
+  background: transparent;
+  border: none;
 }

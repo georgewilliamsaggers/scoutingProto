@@ -1,8 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { HoldToEndButton } from "@/components/HoldToEndButton";
+import { DiseaseObservationFlow } from "@/components/DiseaseObservationFlow";
+import { PestObservationFlow } from "@/components/PestObservationFlow";
+import { MoistureObservationFlow } from "@/components/MoistureObservationFlow";
+import { WeedObservationFlow } from "@/components/WeedObservationFlow";
+import { ObservationMapOverlay } from "@/components/ObservationMapOverlay";
 import { LogObservationSheet } from "@/components/LogObservationSheet";
 import { ObservationLogPage } from "@/components/ObservationLogPage";
 import { VoiceNoteOverlay } from "@/components/VoiceNoteOverlay";
@@ -14,8 +19,10 @@ import {
   formatVoiceNoteSummary,
   getObservationLabel,
   OBSERVATION_TYPES,
+  MoistureObservationDetails,
   ObservationType,
   OtherObservationDetails,
+  PestObservationDetails,
   ScoutingObservation,
   VoiceNoteDetails,
   WeedObservationDetails,
@@ -33,6 +40,11 @@ export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
   const [observations, setObservations] = useState<ScoutingObservation[]>([]);
   const [activeObservationType, setActiveObservationType] =
     useState<ObservationType | null>(null);
+  const [diseaseFlowOpen, setDiseaseFlowOpen] = useState(false);
+  const [pestFlowOpen, setPestFlowOpen] = useState(false);
+  const [weedFlowOpen, setWeedFlowOpen] = useState(false);
+  const [moistureFlowOpen, setMoistureFlowOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
   const [voiceNoteOpen, setVoiceNoteOpen] = useState(false);
   const [sessionMinutes, setSessionMinutes] = useState(0);
   const [activePage, setActivePage] = useState(0);
@@ -56,7 +68,9 @@ export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
     note: string,
     diseaseDetails?: DiseaseObservationDetails,
     otherDetails?: OtherObservationDetails,
-    weedDetails?: WeedObservationDetails
+    weedDetails?: WeedObservationDetails,
+    pestDetails?: PestObservationDetails,
+    moistureDetails?: MoistureObservationDetails
   ) {
     setObservations((prev) => [
       ...prev,
@@ -65,7 +79,11 @@ export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
         note || `Logged ${getObservationLabel(type).toLowerCase()}.`,
         diseaseDetails,
         otherDetails,
-        weedDetails
+        weedDetails,
+        undefined,
+        pestDetails,
+        moistureDetails,
+        task.fieldId
       ),
     ]);
   }
@@ -79,7 +97,10 @@ export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
         undefined,
         undefined,
         undefined,
-        details
+        details,
+        undefined,
+        undefined,
+        task.fieldId
       ),
     ]);
   }
@@ -87,6 +108,26 @@ export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
   function handleObservationSelect(type: ObservationType) {
     if (type === "voice_note") {
       setVoiceNoteOpen(true);
+      return;
+    }
+
+    if (type === "disease") {
+      setDiseaseFlowOpen(true);
+      return;
+    }
+
+    if (type === "pest") {
+      setPestFlowOpen(true);
+      return;
+    }
+
+    if (type === "weed") {
+      setWeedFlowOpen(true);
+      return;
+    }
+
+    if (type === "moisture") {
+      setMoistureFlowOpen(true);
       return;
     }
 
@@ -102,10 +143,14 @@ export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
     if (!container) return;
 
     const page = Math.round(container.scrollLeft / container.clientWidth);
-    setActivePage(page);
+    if (page !== activePage) {
+      setActivePage(page);
+    }
   }
 
   function goToPage(page: number) {
+    setActivePage(page);
+
     const container = pageScrollRef.current;
     if (!container) return;
 
@@ -113,8 +158,16 @@ export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
       left: page * container.clientWidth,
       behavior: "smooth",
     });
-    setActivePage(page);
   }
+
+  const observationCounts = useMemo(
+    () =>
+      observations.reduce<Partial<Record<ObservationType, number>>>((counts, observation) => {
+        counts[observation.type] = (counts[observation.type] ?? 0) + 1;
+        return counts;
+      }, {}),
+    [observations]
+  );
 
   return (
     <MobileShell>
@@ -142,45 +195,89 @@ export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
           </div>
         </div>
 
-        <div
-          ref={pageScrollRef}
-          onScroll={handlePageScroll}
-          className="flex min-h-0 flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        >
-          <main className="flex h-full w-full shrink-0 snap-start flex-col overflow-y-auto px-7 pt-3 pb-4">
-            <div className="mb-5">
-              <h2 className="text-xl font-bold text-navy">Log an observation</h2>
-            </div>
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div
+            ref={pageScrollRef}
+            onScroll={handlePageScroll}
+            className="flex min-h-0 flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            <main className="relative z-10 flex h-full min-h-0 w-full shrink-0 snap-start touch-pan-y flex-col px-7 pt-3 pb-2">
+              <h2 className="mb-2 shrink-0 text-[1.625rem] font-bold leading-tight text-navy">
+                Log an observation
+              </h2>
 
-            <div className="grid flex-1 auto-rows-fr grid-cols-2 gap-3">
-              {OBSERVATION_TYPES.map((observation) => (
-                <button
-                  key={observation.id}
-                  type="button"
-                  onClick={() => handleObservationSelect(observation.id)}
-                  className={[
-                    "flex h-full min-h-[4.25rem] items-center gap-2.5 rounded-2xl px-4 py-3 text-left ring-1 transition-all active:scale-[0.98]",
-                    observation.tileClass,
-                  ].join(" ")}
-                >
-                  <span
-                    className={[
-                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
-                      observation.iconClass,
-                    ].join(" ")}
+              <div className="flex min-h-0 flex-1 flex-col gap-2">
+                {[0, 1, 2].map((rowIndex) => (
+                  <div
+                    key={rowIndex}
+                    className="grid min-h-0 flex-1 grid-cols-2 gap-2"
                   >
-                    <ObservationIcon type={observation.id} />
-                  </span>
-                  <span className="text-base font-semibold leading-tight text-navy">
-                    {observation.label}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </main>
+                    {OBSERVATION_TYPES.slice(rowIndex * 2, rowIndex * 2 + 2).map(
+                      (observation) => {
+                        const count = observationCounts[observation.id] ?? 0;
 
-          <div className="h-full w-full shrink-0 snap-start overflow-hidden">
-            <ObservationLogPage observations={observations} />
+                        return (
+                          <button
+                            key={observation.id}
+                            type="button"
+                            onPointerDown={(event) => event.stopPropagation()}
+                            onClick={() => handleObservationSelect(observation.id)}
+                            className={[
+                              "relative flex h-full min-h-0 cursor-pointer touch-manipulation flex-col rounded-2xl px-3.5 py-4 text-left transition-all active:scale-[0.98]",
+                              observation.tileClass,
+                            ].join(" ")}
+                          >
+                            {count > 0 && (
+                              <span
+                                className={[
+                                  "pointer-events-none absolute right-2.5 top-2.5 flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-xs font-bold",
+                                  observation.badgeClass,
+                                ].join(" ")}
+                              >
+                                {count}
+                              </span>
+                            )}
+                            <span className={["pointer-events-none", observation.iconClass].join(" ")}>
+                              <ObservationIcon
+                                type={observation.id}
+                                className="h-10 w-10"
+                              />
+                            </span>
+                            <span className="pointer-events-none mt-auto">
+                              <span
+                                className={[
+                                  "block text-lg font-semibold leading-tight tracking-tight",
+                                  observation.textClass,
+                                ].join(" ")}
+                              >
+                                {observation.label}
+                              </span>
+                              {observation.supportText && (
+                                <span
+                                  className={[
+                                    "mt-1 block text-xs font-normal leading-snug opacity-60",
+                                    observation.textClass,
+                                  ].join(" ")}
+                                >
+                                  {observation.supportText}
+                                </span>
+                              )}
+                            </span>
+                          </button>
+                        );
+                      }
+                    )}
+                  </div>
+                ))}
+              </div>
+            </main>
+
+            <div className="relative z-10 h-full w-full shrink-0 snap-start overflow-hidden">
+              <ObservationLogPage
+                observations={observations}
+                onOpenMap={() => setMapOpen(true)}
+              />
+            </div>
           </div>
         </div>
 
@@ -204,11 +301,66 @@ export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
       </div>
 
       <LogObservationSheet
-        open={activeObservationType !== null}
+        open={
+          activeObservationType !== null &&
+          activeObservationType !== "disease" &&
+          activeObservationType !== "pest" &&
+          activeObservationType !== "weed" &&
+          activeObservationType !== "moisture"
+        }
         type={activeObservationType}
         onClose={() => setActiveObservationType(null)}
         onSave={handleSaveObservation}
       />
+
+      <DiseaseObservationFlow
+        open={diseaseFlowOpen}
+        commodity={task.commodity}
+        onClose={() => setDiseaseFlowOpen(false)}
+        onSave={(note, details) => handleSaveObservation("disease", note, details)}
+      />
+
+      <PestObservationFlow
+        open={pestFlowOpen}
+        commodity={task.commodity}
+        onClose={() => setPestFlowOpen(false)}
+        onSave={(note, details) =>
+          handleSaveObservation("pest", note, undefined, undefined, undefined, details)
+        }
+      />
+
+      <WeedObservationFlow
+        open={weedFlowOpen}
+        commodity={task.commodity}
+        onClose={() => setWeedFlowOpen(false)}
+        onSave={(note, details) =>
+          handleSaveObservation("weed", note, undefined, undefined, details)
+        }
+      />
+
+      <MoistureObservationFlow
+        open={moistureFlowOpen}
+        onClose={() => setMoistureFlowOpen(false)}
+        onSave={(note, details) =>
+          handleSaveObservation(
+            "moisture",
+            note,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            details
+          )
+        }
+      />
+
+      {mapOpen && (
+        <ObservationMapOverlay
+          observations={observations}
+          fieldId={task.fieldId}
+          onClose={() => setMapOpen(false)}
+        />
+      )}
 
       <VoiceNoteOverlay
         open={voiceNoteOpen}
@@ -219,15 +371,20 @@ export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
   );
 }
 
-function ObservationIcon({ type }: { type: ObservationType }) {
+function ObservationIcon({
+  type,
+  className = "h-10 w-10",
+}: {
+  type: ObservationType;
+  className?: string;
+}) {
   return (
     <svg
-      width="22"
-      height="22"
+      className={[className, "pointer-events-none"].join(" ")}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.75"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
@@ -240,62 +397,41 @@ function ObservationIcon({ type }: { type: ObservationType }) {
 const observationIcons: Record<ObservationType, ReactNode> = {
   disease: (
     <>
-      <circle cx="12" cy="12" r="3" />
-      <path d="M12 2v2" />
-      <path d="M12 20v2" />
-      <path d="m4.93 4.93 1.41 1.41" />
-      <path d="m17.66 17.66 1.41 1.41" />
-      <path d="M2 12h2" />
-      <path d="M20 12h2" />
+      <circle cx="12" cy="12" r="3.5" />
+      <path d="M12 2v2.5" />
+      <path d="M12 19.5V22" />
+      <path d="m4.5 4.5 1.8 1.8" />
+      <path d="m17.7 17.7 1.8 1.8" />
+      <path d="M2 12h2.5" />
+      <path d="M19.5 12H22" />
+      <path d="m4.5 19.5 1.8-1.8" />
+      <path d="m17.7 6.3 1.8-1.8" />
     </>
   ),
   pest: (
     <>
-      <path d="M8 2v4" />
-      <path d="M16 2v4" />
-      <path d="M12 6c-3 0-5 2-5 5v5h10v-5c0-3-2-5-5-5Z" />
-      <path d="M8 11H3" />
-      <path d="M21 11h-5" />
+      <ellipse cx="12" cy="13" rx="5" ry="6" />
+      <circle cx="12" cy="7" r="2.5" />
+      <path d="M7 11 4 9" />
+      <path d="M17 11l3-2" />
+      <path d="M7 16 4 18" />
+      <path d="M17 16l3 2" />
+      <path d="M9 7 7 4" />
+      <path d="M15 7l2-3" />
     </>
   ),
   weed: (
     <>
-      <path d="M12 22V12" />
-      <path d="M12 12C12 8 8 4 4 4c0 4 4 8 8 8" />
-      <path d="M12 12c0-4 4-8 8-8 0 4-4 8-8 8" />
-    </>
-  ),
-  nutrition: (
-    <>
-      <path d="M12 3v18" />
-      <path d="M8 7h8" />
-      <path d="M9 12h6" />
-      <path d="M10 17h4" />
+      <path d="M12 22V11" />
+      <path d="M12 11C12 7.5 8.5 4 5 4c0 3.5 3.5 7 7 7" />
+      <path d="M12 11c0-3.5 3.5-7 7-7 0 3.5-3.5 7-7 7" />
+      <path d="M12 11c0-2 1.5-4 3.5-5" />
     </>
   ),
   moisture: (
     <>
       <path d="M12 2.69c2.5 3 5 6.5 5 9.5a5 5 0 0 1-10 0c0-3 2.5-6.5 5-9.5Z" />
-    </>
-  ),
-  chemical_injury: (
-    <>
-      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
-      <path d="M12 9v4" />
-      <path d="M12 17h.01" />
-    </>
-  ),
-  post_treatment_check: (
-    <>
-      <path d="M20 6 9 17l-5-5" />
-    </>
-  ),
-  trap: (
-    <>
-      <path d="M4 4h16v4H4z" />
-      <path d="M8 8v12" />
-      <path d="M16 8v12" />
-      <path d="M6 20h12" />
+      <path d="M7 14.5h10" />
     </>
   ),
   other: (
