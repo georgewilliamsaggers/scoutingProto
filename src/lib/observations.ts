@@ -600,6 +600,7 @@ export interface PestObservationDetails {
   damageSeverityScale: number;
   flaggedForFollowUp: boolean;
   otherNotes: string;
+  voiceNote?: VoiceNoteDetails;
   media: ObservationMediaItem[];
 }
 
@@ -655,6 +656,7 @@ export function formatPestSummary(details: PestObservationDetails): string {
     severityLabel && `Damage: ${severityLabel}`,
     details.flaggedForFollowUp ? "Flagged for follow up" : null,
     details.otherNotes.trim() || null,
+    details.voiceNote && formatVoiceNoteSummary(details.voiceNote),
   ].filter(Boolean);
 
   const imageCount = details.media.filter((item) => item.type === "image").length;
@@ -745,6 +747,7 @@ export interface DiseaseObservationDetails {
   sampleTaken: boolean;
   needsAction: boolean;
   otherNotes: string;
+  voiceNote?: VoiceNoteDetails;
   media: ObservationMediaItem[];
 }
 
@@ -846,6 +849,7 @@ export function formatDiseaseSummary(details: DiseaseObservationDetails): string
     details.sampleTaken ? "Sample taken" : null,
     details.needsAction ? "Needs action" : null,
     details.otherNotes && details.otherNotes,
+    details.voiceNote && formatVoiceNoteSummary(details.voiceNote),
   ].filter(Boolean);
 
   const imageCount = details.media.filter((item) => item.type === "image").length;
@@ -1062,6 +1066,7 @@ export interface WeedObservationDetails {
   densityScale: number;
   flaggedForFollowUp: boolean;
   otherNotes: string;
+  voiceNote?: VoiceNoteDetails;
   media: ObservationMediaItem[];
 }
 
@@ -1119,6 +1124,7 @@ export function formatWeedSummary(details: WeedObservationDetails): string {
     densityLabel && `Density: ${densityLabel}`,
     details.flaggedForFollowUp ? "Flagged for follow up" : null,
     details.otherNotes.trim() || null,
+    details.voiceNote && formatVoiceNoteSummary(details.voiceNote),
   ].filter(Boolean);
 
   const imageCount = details.media.filter((item) => item.type === "image").length;

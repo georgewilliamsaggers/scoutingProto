@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { formatDuration } from "@/hooks/useVoiceRecorder";
 import {
   DiseaseObservationDetails,
   FIELD_PREVALENCE_LABELS,
@@ -19,6 +20,7 @@ import {
   PLANTS_AFFECTED_LABELS,
   SEVERITY_SCALE_LABELS,
   ScoutingObservation,
+  VoiceNoteDetails,
   WEED_DENSITY_OPTIONS,
   WEED_SIZE_OPTIONS,
   WeedObservationDetails,
@@ -375,6 +377,10 @@ function DiseaseExpandedDetails({
         )}
       </dl>
 
+      {details.voiceNote && (
+        <VoiceNotePlayer voiceNote={details.voiceNote} />
+      )}
+
       {details.media.length > 0 && <MediaGrid items={details.media} />}
     </>
   );
@@ -432,6 +438,10 @@ function PestExpandedDetails({
         )}
       </dl>
 
+      {details.voiceNote && (
+        <VoiceNotePlayer voiceNote={details.voiceNote} />
+      )}
+
       {details.media.length > 0 && <MediaGrid items={details.media} />}
     </>
   );
@@ -472,6 +482,9 @@ function WeedExpandedDetails({
           <DetailRow label="Notes" value={details.otherNotes.trim()} />
         )}
       </dl>
+      {details.voiceNote && (
+        <VoiceNotePlayer voiceNote={details.voiceNote} />
+      )}
       {details.media.length > 0 && <MediaGrid items={details.media} />}
     </>
   );
@@ -497,6 +510,22 @@ function MoistureExpandedDetails({
         );
       })}
     </dl>
+  );
+}
+
+function VoiceNotePlayer({ voiceNote }: { voiceNote: VoiceNoteDetails }) {
+  return (
+    <div className="mt-3">
+      <p className="mb-1.5 text-xs font-medium text-navy/70">
+        Voice note · {formatDuration(voiceNote.durationSeconds)}
+      </p>
+      <audio
+        src={voiceNote.audioUrl}
+        controls
+        playsInline
+        className="w-full"
+      />
+    </div>
   );
 }
 

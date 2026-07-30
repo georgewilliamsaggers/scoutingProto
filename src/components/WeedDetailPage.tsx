@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useRef, useState } from "react";
+import { HoldToRecordVoiceNote } from "@/components/HoldToRecordVoiceNote";
 import {
   formatMediaUploadTime,
   getWeedDisplayName,
@@ -300,6 +301,10 @@ export function WeedDetailPage({
             rows={4}
             placeholder="Add any additional observations…"
             className="w-full resize-none rounded-xl border border-border bg-surface px-4 py-3 text-sm text-navy outline-none transition-all placeholder:text-muted/60 focus:border-lime focus:ring-2 focus:ring-lime/20"
+          />
+          <HoldToRecordVoiceNote
+            value={details.voiceNote}
+            onChange={(voiceNote) => updateField("voiceNote", voiceNote)}
           />
         </section>
       </div>
