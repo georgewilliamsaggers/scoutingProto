@@ -11,6 +11,7 @@ export const OBSERVATION_TYPES: {
   label: string;
   supportText?: string;
   tileClass: string;
+  borderClass: string;
   iconClass: string;
   textClass: string;
   badgeClass: string;
@@ -19,6 +20,7 @@ export const OBSERVATION_TYPES: {
     id: "disease",
     label: "Disease",
     tileClass: "bg-red-50 active:bg-red-100",
+    borderClass: "border-2 border-red-200",
     iconClass: "text-red-800",
     textClass: "text-red-900",
     badgeClass: "bg-red-300 text-white",
@@ -27,6 +29,7 @@ export const OBSERVATION_TYPES: {
     id: "pest",
     label: "Pest",
     tileClass: "bg-amber-50 active:bg-amber-100",
+    borderClass: "border-2 border-amber-200",
     iconClass: "text-amber-900",
     textClass: "text-amber-950",
     badgeClass: "bg-amber-300 text-amber-950",
@@ -35,6 +38,7 @@ export const OBSERVATION_TYPES: {
     id: "weed",
     label: "Weed",
     tileClass: "bg-emerald-50 active:bg-emerald-100",
+    borderClass: "border-2 border-emerald-200",
     iconClass: "text-emerald-700",
     textClass: "text-emerald-900",
     badgeClass: "bg-emerald-300 text-white",
@@ -43,6 +47,7 @@ export const OBSERVATION_TYPES: {
     id: "moisture",
     label: "Moisture",
     tileClass: "bg-sky-50 active:bg-sky-100",
+    borderClass: "border-2 border-sky-200",
     iconClass: "text-sky-800",
     textClass: "text-sky-900",
     badgeClass: "bg-sky-300 text-white",
@@ -52,6 +57,7 @@ export const OBSERVATION_TYPES: {
     label: "Other",
     supportText: "Capture a general observation",
     tileClass: "bg-slate-100 active:bg-slate-200",
+    borderClass: "border-2 border-slate-300",
     iconClass: "text-slate-600",
     textClass: "text-slate-800",
     badgeClass: "bg-slate-300 text-white",
@@ -61,6 +67,7 @@ export const OBSERVATION_TYPES: {
     label: "Voice note",
     supportText: "Record a voice note of our observations",
     tileClass: "bg-indigo-50 active:bg-indigo-100",
+    borderClass: "border-2 border-indigo-200",
     iconClass: "text-indigo-700",
     textClass: "text-indigo-900",
     badgeClass: "bg-indigo-300 text-white",
@@ -222,9 +229,9 @@ export const DISEASE_CATEGORIES = [
 
 export type DiseaseCategory = (typeof DISEASE_CATEGORIES)[number];
 
-export interface DiseaseCategorySearchResult {
+export interface DiseaseSearchGroup {
   category: DiseaseCategory;
-  specificType?: DiseaseSpecificType;
+  species: DiseaseSpecificType[];
 }
 
 export const DISEASE_SPECIFIC_TYPES = [
@@ -337,15 +344,34 @@ export function getDiseaseCategoryGridPages(): (DiseaseCategory | null)[][] {
   });
 }
 
-export function searchDiseaseCategories(query: string): DiseaseCategorySearchResult[] {
+interface SearchableCategory {
+  id: string;
+  label: string;
+  description: string;
+  searchTerms?: readonly string[];
+}
+
+interface SearchableSpecies {
+  id: string;
+  categoryId: string;
+  label: string;
+  description: string;
+}
+
+function buildObservationSearchGroups<
+  TCategory extends SearchableCategory,
+  TSpecies extends SearchableSpecies,
+>(
+  query: string,
+  categories: readonly TCategory[],
+  getSpeciesForCategory: (categoryId: string) => TSpecies[]
+): { category: TCategory; species: TSpecies[] }[] {
   const normalizedQuery = query.trim().toLowerCase();
   if (!normalizedQuery) return [];
 
-  const directlyMatchedCategoryIds = new Set<string>();
-  const results: DiseaseCategorySearchResult[] = [];
-  const matchedSpecificTypeIds = new Set<string>();
+  const groups: { category: TCategory; species: TSpecies[] }[] = [];
 
-  for (const category of DISEASE_CATEGORIES) {
+  for (const category of categories) {
     const categoryText = [
       category.label,
       category.description,
@@ -353,45 +379,29 @@ export function searchDiseaseCategories(query: string): DiseaseCategorySearchRes
     ]
       .join(" ")
       .toLowerCase();
+    const categoryMatches = categoryText.includes(normalizedQuery);
+    const allSpecies = getSpeciesForCategory(category.id);
+    const matchingSpecies = allSpecies.filter((species) =>
+      [species.label, species.description].join(" ").toLowerCase().includes(normalizedQuery)
+    );
 
-    if (categoryText.includes(normalizedQuery)) {
-      directlyMatchedCategoryIds.add(category.id);
-    }
+    if (!categoryMatches && matchingSpecies.length === 0) continue;
+
+    const species =
+      categoryMatches && matchingSpecies.length === 0 ? allSpecies : matchingSpecies;
+
+    groups.push({ category, species });
   }
 
-  for (const type of DISEASE_SPECIFIC_TYPES) {
-    const typeText = [type.label, type.description].join(" ").toLowerCase();
-    if (!typeText.includes(normalizedQuery)) continue;
+  return groups.sort((a, b) => a.category.label.localeCompare(b.category.label));
+}
 
-    const category = getDiseaseCategory(type.categoryId);
-    if (!category) continue;
-
-    results.push({ category, specificType: type });
-    matchedSpecificTypeIds.add(type.id);
-  }
-
-  for (const categoryId of directlyMatchedCategoryIds) {
-    const category = getDiseaseCategory(categoryId);
-    if (!category) continue;
-
-    const types = getDiseaseSpecificTypesForCategory(categoryId);
-    if (types.length === 0) {
-      results.push({ category });
-      continue;
-    }
-
-    for (const type of types) {
-      if (matchedSpecificTypeIds.has(type.id)) continue;
-      results.push({ category, specificType: type });
-      matchedSpecificTypeIds.add(type.id);
-    }
-  }
-
-  return results.sort((a, b) => {
-    const aLabel = a.specificType?.label ?? a.category.label;
-    const bLabel = b.specificType?.label ?? b.category.label;
-    return aLabel.localeCompare(bLabel);
-  });
+export function searchDiseaseGroups(query: string): DiseaseSearchGroup[] {
+  return buildObservationSearchGroups(
+    query,
+    DISEASE_CATEGORIES,
+    getDiseaseSpecificTypesForCategory
+  );
 }
 
 export const PEST_CATEGORIES = [
@@ -522,9 +532,9 @@ export const PEST_SPECIFIC_TYPES = [
 
 export type PestSpecificType = (typeof PEST_SPECIFIC_TYPES)[number];
 
-export interface PestCategorySearchResult {
+export interface PestSearchGroup {
   category: PestCategory;
-  specificType?: PestSpecificType;
+  species: PestSpecificType[];
 }
 
 export const PEST_CATEGORY_SLOTS_PER_PAGE = 6;
@@ -556,61 +566,12 @@ export function getPestCategoryGridPages(): (PestCategory | null)[][] {
   });
 }
 
-export function searchPestCategories(query: string): PestCategorySearchResult[] {
-  const normalizedQuery = query.trim().toLowerCase();
-  if (!normalizedQuery) return [];
-
-  const directlyMatchedCategoryIds = new Set<string>();
-  const results: PestCategorySearchResult[] = [];
-  const matchedSpecificTypeIds = new Set<string>();
-
-  for (const category of PEST_CATEGORIES) {
-    const categoryText = [
-      category.label,
-      category.description,
-      ...(category.searchTerms ?? []),
-    ]
-      .join(" ")
-      .toLowerCase();
-
-    if (categoryText.includes(normalizedQuery)) {
-      directlyMatchedCategoryIds.add(category.id);
-    }
-  }
-
-  for (const type of PEST_SPECIFIC_TYPES) {
-    const typeText = [type.label, type.description].join(" ").toLowerCase();
-    if (!typeText.includes(normalizedQuery)) continue;
-
-    const category = getPestCategory(type.categoryId);
-    if (!category) continue;
-
-    results.push({ category, specificType: type });
-    matchedSpecificTypeIds.add(type.id);
-  }
-
-  for (const categoryId of directlyMatchedCategoryIds) {
-    const category = getPestCategory(categoryId);
-    if (!category) continue;
-
-    const types = getPestSpecificTypesForCategory(categoryId);
-    if (types.length === 0) {
-      results.push({ category });
-      continue;
-    }
-
-    for (const type of types) {
-      if (matchedSpecificTypeIds.has(type.id)) continue;
-      results.push({ category, specificType: type });
-      matchedSpecificTypeIds.add(type.id);
-    }
-  }
-
-  return results.sort((a, b) => {
-    const aLabel = a.specificType?.label ?? a.category.label;
-    const bLabel = b.specificType?.label ?? b.category.label;
-    return aLabel.localeCompare(bLabel);
-  });
+export function searchPestGroups(query: string): PestSearchGroup[] {
+  return buildObservationSearchGroups(
+    query,
+    PEST_CATEGORIES,
+    getPestSpecificTypesForCategory
+  );
 }
 
 export const PEST_INFECTED_PARTS = [

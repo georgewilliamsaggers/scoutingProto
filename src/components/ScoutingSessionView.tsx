@@ -201,16 +201,16 @@ export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
             onScroll={handlePageScroll}
             className="flex min-h-0 flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
-            <main className="relative z-10 flex h-full min-h-0 w-full shrink-0 snap-start touch-pan-y flex-col px-7 pt-3 pb-2">
-              <h2 className="mb-2 shrink-0 text-[1.625rem] font-bold leading-tight text-navy">
+            <main className="relative z-10 flex h-full min-h-0 w-full shrink-0 snap-start touch-pan-y flex-col px-7 pt-4 pb-3">
+              <h2 className="mb-4 shrink-0 text-[1.625rem] font-bold leading-tight text-navy">
                 Log an observation
               </h2>
 
-              <div className="flex min-h-0 flex-1 flex-col gap-2">
+              <div className="flex min-h-0 flex-1 flex-col gap-3.5">
                 {[0, 1, 2].map((rowIndex) => (
                   <div
                     key={rowIndex}
-                    className="grid min-h-0 flex-1 grid-cols-2 gap-2"
+                    className="grid min-h-0 flex-1 grid-cols-2 gap-3"
                   >
                     {OBSERVATION_TYPES.slice(rowIndex * 2, rowIndex * 2 + 2).map(
                       (observation) => {
@@ -223,8 +223,9 @@ export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
                             onPointerDown={(event) => event.stopPropagation()}
                             onClick={() => handleObservationSelect(observation.id)}
                             className={[
-                              "relative flex h-full min-h-0 cursor-pointer touch-manipulation flex-col rounded-2xl px-3.5 py-4 text-left transition-all active:scale-[0.98]",
+                              "relative flex h-full min-h-0 cursor-pointer touch-manipulation flex-col rounded-2xl px-3.5 py-5 text-left transition-all active:scale-[0.98]",
                               observation.tileClass,
+                              observation.borderClass,
                             ].join(" ")}
                           >
                             {count > 0 && (

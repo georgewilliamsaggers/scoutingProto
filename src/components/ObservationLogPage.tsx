@@ -14,8 +14,7 @@ import {
   getPestSpecificType,
   getWeedDisplayName,
   MoistureObservationDetails,
-  OBSERVATION_FILTER_OPTIONS,
-  ObservationFilter,
+  OBSERVATION_TYPES,
   PestObservationDetails,
   PLANTS_AFFECTED_LABELS,
   SEVERITY_SCALE_LABELS,
@@ -35,32 +34,24 @@ export function ObservationLogPage({
   onOpenMap,
 }: ObservationLogPageProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<ObservationFilter>("all");
 
-  const filteredObservations = useMemo(() => {
-    if (activeFilter === "all") return observations;
-    return observations.filter((observation) => observation.type === activeFilter);
-  }, [activeFilter, observations]);
-
-  const timelineItems = [...filteredObservations].reverse();
-
-  const filterCounts = useMemo(() => {
-    const counts: Record<ObservationFilter, number> = { all: observations.length } as Record<
-      ObservationFilter,
-      number
-    >;
-
-    for (const observation of observations) {
-      counts[observation.type] = (counts[observation.type] ?? 0) + 1;
-    }
-
-    return counts;
-  }, [observations]);
+  const groupedObservations = useMemo(
+    () =>
+      OBSERVATION_TYPES.map((type) => ({
+        type: type.id,
+        label: type.label,
+        items: observations
+          .filter((observation) => observation.type === type.id)
+          .slice()
+          .reverse(),
+      })).filter((group) => group.items.length > 0),
+    [observations]
+  );
 
   return (
     <div className="flex h-full flex-col px-7 pt-3 pb-4">
       <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
-        <h2 className="text-xl font-bold text-navy">Field log</h2>
+        <h2 className="text-[1.625rem] font-bold leading-tight text-navy">Field log</h2>
         <button
           type="button"
           onClick={onOpenMap}
@@ -72,119 +63,90 @@ export function ObservationLogPage({
         </button>
       </div>
 
-      {observations.length > 0 && (
-        <div className="-mx-1 mb-3 shrink-0 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="flex w-max gap-2 pb-1">
-            {OBSERVATION_FILTER_OPTIONS.map((option) => {
-              const count = filterCounts[option.id] ?? 0;
-              if (option.id !== "all" && count === 0) return null;
-
-              const selected = activeFilter === option.id;
-
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => {
-                    setActiveFilter(option.id);
-                    setExpandedId(null);
-                  }}
-                  aria-pressed={selected}
-                  className={[
-                    "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all active:scale-[0.98]",
-                    selected
-                      ? "bg-navy text-white shadow-sm"
-                      : "bg-surface-elevated text-muted ring-1 ring-border",
-                  ].join(" ")}
-                >
-                  {option.label}
-                  <span
-                    className={[
-                      "rounded-full px-1.5 py-0.5 text-[10px] tabular-nums",
-                      selected ? "bg-white/15 text-white" : "bg-surface text-navy/70",
-                    ].join(" ")}
-                  >
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {observations.length === 0 ? (
         <p className="text-sm text-muted">
           Observations you log during this session will appear here.
         </p>
-      ) : timelineItems.length > 0 ? (
+      ) : (
         <div className="min-h-0 flex-1 overflow-y-auto -mx-1 px-1">
-          <ul className="space-y-0 pb-2">
-            {timelineItems.map((observation, index) => {
-              const expanded = expandedId === observation.id;
-              const typeLabel = getObservationLabel(observation.type);
-              const isLast = index === timelineItems.length - 1;
+          <div className="space-y-5 pb-2">
+            {groupedObservations.map((group) => (
+              <section key={group.type}>
+                <h3 className="mb-2 text-base font-bold text-navy">{group.label}</h3>
+                <ul className="space-y-2">
+                  {group.items.map((observation) => {
+                    const expanded = expandedId === observation.id;
 
-              return (
-                <li key={observation.id} className="relative flex gap-3">
-                  <div className="relative flex w-12 shrink-0 flex-col items-center pt-0.5">
-                    {!isLast && (
-                      <div
-                        className="absolute top-[1.625rem] bottom-0 w-px bg-border"
-                        aria-hidden="true"
-                      />
-                    )}
-                    <time
-                      dateTime={observation.createdAt}
-                      className="text-[11px] font-medium tabular-nums text-muted"
-                    >
-                      {formatLogTime(observation.createdAt)}
-                    </time>
-                    <span
-                      className="relative z-10 mt-1.5 h-2.5 w-2.5 rounded-full border-2 border-teal bg-surface-elevated"
-                      aria-hidden="true"
-                    />
-                  </div>
+                    return (
+                      <li key={observation.id}>
+                        <div className="overflow-hidden rounded-xl border border-border bg-surface-elevated shadow-sm">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedId(expanded ? null : observation.id)
+                            }
+                            className="flex w-full items-start gap-2 px-3.5 py-3 text-left transition-colors hover:bg-surface"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between gap-3">
+                                <p className="text-sm font-semibold text-navy">
+                                  {getObservationTitle(observation)}
+                                </p>
+                                <time
+                                  dateTime={observation.createdAt}
+                                  className="shrink-0 text-[11px] font-medium tabular-nums text-muted"
+                                >
+                                  {formatLogTime(observation.createdAt)}
+                                </time>
+                              </div>
+                              {!expanded && (
+                                <CollapsedSummary observation={observation} />
+                              )}
+                            </div>
+                            <ChevronIcon expanded={expanded} />
+                          </button>
 
-                  <div className="min-w-0 flex-1 pb-4">
-                    <div className="overflow-hidden rounded-xl border border-border bg-surface-elevated shadow-sm">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setExpandedId(expanded ? null : observation.id)
-                        }
-                        className="flex w-full items-start gap-2 px-3.5 py-3 text-left transition-colors hover:bg-surface"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-navy">{typeLabel}</p>
-                          {!expanded && (
-                            <CollapsedSummary observation={observation} />
+                          {expanded && (
+                            <div className="border-t border-border/60 bg-surface px-3.5 py-3">
+                              <ExpandedDetails observation={observation} />
+                            </div>
                           )}
                         </div>
-                        <ChevronIcon expanded={expanded} />
-                      </button>
-
-                      {expanded && (
-                        <div className="border-t border-border/60 bg-surface px-3.5 py-3">
-                          <ExpandedDetails observation={observation} />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ) : (
-        <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-border bg-surface px-4 py-8 text-center">
-          <p className="text-sm text-muted">
-            No observations match this filter.
-          </p>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
+          </div>
         </div>
       )}
     </div>
   );
+}
+
+function getObservationTitle(observation: ScoutingObservation): string {
+  if (observation.type === "disease" && observation.diseaseDetails) {
+    return getDiseaseDisplayName(observation.diseaseDetails);
+  }
+
+  if (observation.type === "pest" && observation.pestDetails) {
+    return getPestDisplayName(observation.pestDetails);
+  }
+
+  if (observation.type === "weed" && observation.weedDetails) {
+    return getWeedDisplayName(observation.weedDetails);
+  }
+
+  if (observation.type === "moisture" && observation.moistureDetails) {
+    return getMoistureCollapsedSummary(observation.moistureDetails);
+  }
+
+  if (observation.note.trim()) {
+    return observation.note.trim();
+  }
+
+  return getObservationLabel(observation.type);
 }
 
 function CollapsedSummary({ observation }: { observation: ScoutingObservation }) {
@@ -201,10 +163,15 @@ function CollapsedSummary({ observation }: { observation: ScoutingObservation })
   }
 
   if (observation.type === "moisture" && observation.moistureDetails) {
-    return <MoistureCollapsedSummary details={observation.moistureDetails} />;
+    return null;
   }
 
   if (observation.note) {
+    const title = getObservationTitle(observation);
+    if (observation.note.trim() === title) {
+      return null;
+    }
+
     return (
       <p className="mt-0.5 line-clamp-2 text-sm text-muted">{observation.note}</p>
     );
@@ -218,25 +185,16 @@ function DiseaseCollapsedSummary({
 }: {
   details: DiseaseObservationDetails;
 }) {
-  const diseaseName = getDiseaseDisplayName(details);
   const plantsAffected =
     details.plantsAffectedScale > 0
       ? PLANTS_AFFECTED_LABELS[details.plantsAffectedScale - 1]
       : details.plantsAffectedPercent.trim();
 
-  let summary: string | null = null;
-
-  if (diseaseName && plantsAffected) {
-    summary = `${diseaseName} · ${plantsAffected} plants affected`;
-  } else if (diseaseName) {
-    summary = diseaseName;
-  } else if (plantsAffected) {
-    summary = `${plantsAffected} plants affected`;
-  }
-
   return (
     <div className="mt-1.5 space-y-2">
-      {summary && <p className="text-sm text-muted">{summary}</p>}
+      {plantsAffected && (
+        <p className="text-sm text-muted">{plantsAffected} plants affected</p>
+      )}
       {details.flaggedForFollowUp && (
         <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-200">
           Flagged for follow up
@@ -256,20 +214,14 @@ function PestCollapsedSummary({
 }: {
   details: PestObservationDetails;
 }) {
-  const pestName = getPestDisplayName(details);
   const countLabel =
     details.pestCountScale > 0
       ? PLANTS_AFFECTED_LABELS[details.pestCountScale - 1]
       : null;
 
-  const summary =
-    pestName && countLabel
-      ? `${pestName} · ${countLabel}`
-      : pestName || countLabel;
-
   return (
     <div className="mt-1.5 space-y-2">
-      {summary && <p className="text-sm text-muted">{summary}</p>}
+      {countLabel && <p className="text-sm text-muted">{countLabel}</p>}
       {details.flaggedForFollowUp && (
         <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-200">
           Flagged for follow up
@@ -284,20 +236,18 @@ function WeedCollapsedSummary({
 }: {
   details: WeedObservationDetails;
 }) {
-  const weedName = getWeedDisplayName(details);
   const sizeLabel = WEED_SIZE_OPTIONS[details.sizeScale - 1]?.label;
   const densityLabel = WEED_DENSITY_OPTIONS[details.densityScale - 1]?.label;
   const parts = [
-    weedName,
     sizeLabel && sizeLabel.toLowerCase(),
     densityLabel && `${densityLabel.toLowerCase()} density`,
   ].filter(Boolean);
 
   return (
     <div className="mt-1.5 space-y-2">
-      <p className="text-sm text-muted">
-        {parts.length > 0 ? parts.join(" · ") : "Weed observation logged"}
-      </p>
+      {parts.length > 0 && (
+        <p className="text-sm text-muted">{parts.join(" · ")}</p>
+      )}
       {details.flaggedForFollowUp && (
         <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-200">
           Flagged for follow up
@@ -524,18 +474,6 @@ function WeedExpandedDetails({
       </dl>
       {details.media.length > 0 && <MediaGrid items={details.media} />}
     </>
-  );
-}
-
-function MoistureCollapsedSummary({
-  details,
-}: {
-  details: MoistureObservationDetails;
-}) {
-  return (
-    <p className="mt-1.5 text-sm text-muted">
-      {getMoistureCollapsedSummary(details)}
-    </p>
   );
 }
 

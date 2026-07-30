@@ -7,7 +7,7 @@ import {
   PestSpecificType,
   PEST_CATEGORY_PAGE_COUNT,
   getPestCategoryGridPages,
-  searchPestCategories,
+  searchPestGroups,
 } from "@/lib/observations";
 
 interface PestSymptomMatchPageProps {
@@ -26,8 +26,8 @@ export function PestSymptomMatchPage({
   const [searchQuery, setSearchQuery] = useState("");
   const pageScrollRef = useRef<HTMLDivElement>(null);
 
-  const searchResults = useMemo(
-    () => searchPestCategories(searchQuery),
+  const searchGroups = useMemo(
+    () => searchPestGroups(searchQuery),
     [searchQuery]
   );
   const isSearching = searchQuery.trim().length > 0;
@@ -86,17 +86,22 @@ export function PestSymptomMatchPage({
 
       {isSearching ? (
         <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-3">
-          {searchResults.length > 0 ? (
-            <div className="space-y-2.5">
-              {searchResults.map((result) => (
-                <SearchResultCard
-                  key={result.specificType?.id ?? result.category.id}
-                  category={result.category}
-                  specificType={result.specificType}
-                  onSelect={() =>
-                    onSelect(result.category.id, result.specificType?.id)
-                  }
-                />
+          {searchGroups.length > 0 ? (
+            <div className="space-y-3">
+              {searchGroups.map((group) => (
+                <div key={group.category.id} className="space-y-1.5">
+                  <SearchCategoryRow
+                    category={group.category}
+                    onSelect={() => onSelect(group.category.id)}
+                  />
+                  {group.species.map((species) => (
+                    <SearchSpeciesRow
+                      key={species.id}
+                      species={species}
+                      onSelect={() => onSelect(group.category.id, species.id)}
+                    />
+                  ))}
+                </div>
               ))}
             </div>
           ) : (
@@ -211,40 +216,60 @@ function CategoryGridCard({
   );
 }
 
-function SearchResultCard({
+function SearchCategoryRow({
   category,
-  specificType,
   onSelect,
 }: {
   category: PestCategory;
-  specificType?: PestSpecificType;
   onSelect: () => void;
 }) {
-  const title = specificType?.label ?? category.label;
-  const description = specificType?.description ?? category.description;
-  const imageSrc = specificType?.imageSrc ?? category.imageSrc;
-
   return (
     <button
       type="button"
       onClick={onSelect}
-      className="flex w-full items-center gap-3 overflow-hidden rounded-2xl border border-border/80 bg-surface-elevated p-3 text-left shadow-sm transition-all active:scale-[0.98]"
+      className="relative flex min-h-20 w-full overflow-hidden rounded-xl border border-border/80 bg-surface-elevated text-left transition-all active:scale-[0.98]"
     >
-      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface">
+      <div className="absolute inset-y-0 left-0 w-28">
         <Image
-          src={imageSrc}
-          alt={title}
+          src={category.imageSrc}
+          alt={category.label}
           fill
           className="object-cover"
-          sizes="64px"
+          sizes="112px"
         />
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-bold text-navy">{title}</p>
-        {specificType && (
-          <p className="mt-0.5 text-xs font-semibold text-teal">{category.label}</p>
-        )}
-        <p className="mt-1 line-clamp-2 text-xs text-muted">{description}</p>
+      <div className="flex min-w-0 flex-1 items-center py-3.5 pl-[7.5rem] pr-4">
+        <p className="text-sm font-bold text-navy">{category.label}</p>
+      </div>
+    </button>
+  );
+}
+
+function SearchSpeciesRow({
+  species,
+  onSelect,
+}: {
+  species: PestSpecificType;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className="relative ml-3 flex min-h-20 w-[calc(100%-0.75rem)] overflow-hidden rounded-xl border border-border/60 bg-surface text-left transition-all active:scale-[0.98] active:bg-surface-elevated"
+    >
+      <div className="absolute inset-y-0 left-0 w-28">
+        <Image
+          src={species.imageSrc}
+          alt={species.label}
+          fill
+          className="object-cover"
+          sizes="112px"
+        />
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col justify-center py-3.5 pl-[7.5rem] pr-4">
+        <p className="text-sm font-semibold text-navy">{species.label}</p>
+        <p className="mt-0.5 line-clamp-1 text-xs text-muted">{species.description}</p>
       </div>
     </button>
   );
