@@ -1,54 +1,102 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { HoldToEndButton } from "@/components/HoldToEndButton";
 import { DiseaseObservationFlow } from "@/components/DiseaseObservationFlow";
 import { PestObservationFlow } from "@/components/PestObservationFlow";
 import { MoistureObservationFlow } from "@/components/MoistureObservationFlow";
+import { PopulationObservationFlow } from "@/components/PopulationObservationFlow";
 import { WeedObservationFlow } from "@/components/WeedObservationFlow";
 import { ObservationMapOverlay } from "@/components/ObservationMapOverlay";
 import { LogObservationSheet } from "@/components/LogObservationSheet";
 import { ObservationLogPage } from "@/components/ObservationLogPage";
+import { ObservationIcon } from "@/components/ObservationTypeIcon";
 import { VoiceNoteOverlay } from "@/components/VoiceNoteOverlay";
-import { MobileShell } from "@/components/MobileShell";
-import { getFieldById } from "@/lib/fields";
+import { useScopeBriefOptional } from "@/components/ScopeBriefContext";
+import { Field } from "@/lib/fields";
 import {
   createObservation,
   DiseaseObservationDetails,
   formatVoiceNoteSummary,
   getObservationLabel,
-  OBSERVATION_TYPES,
+  LOG_OBSERVATION_TILE_TYPES,
   MoistureObservationDetails,
   ObservationType,
   OtherObservationDetails,
   PestObservationDetails,
+  PopulationCountMethod,
+  PopulationObservationDetails,
   ScoutingObservation,
   VoiceNoteDetails,
   WeedObservationDetails,
 } from "@/lib/observations";
-import { ScoutingTask } from "@/lib/scouting-tasks";
 
 interface ScoutingSessionViewProps {
-  task: ScoutingTask;
+  field: Field;
+  onEndSession: (observations: ScoutingObservation[]) => void;
 }
 
-export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
-  const router = useRouter();
-  const field = getFieldById(task.fieldId);
+export function ScoutingSessionView({
+  field,
+  onEndSession,
+}: ScoutingSessionViewProps) {
+  const scopeBrief = useScopeBriefOptional();
 
   const [observations, setObservations] = useState<ScoutingObservation[]>([]);
+  const [sessionKey, setSessionKey] = useState(0);
   const [activeObservationType, setActiveObservationType] =
     useState<ObservationType | null>(null);
   const [diseaseFlowOpen, setDiseaseFlowOpen] = useState(false);
   const [pestFlowOpen, setPestFlowOpen] = useState(false);
   const [weedFlowOpen, setWeedFlowOpen] = useState(false);
   const [moistureFlowOpen, setMoistureFlowOpen] = useState(false);
+  const [populationFlowOpen, setPopulationFlowOpen] = useState(false);
+  const [populationMethod, setPopulationMethod] =
+    useState<PopulationCountMethod>("square");
   const [mapOpen, setMapOpen] = useState(false);
   const [voiceNoteOpen, setVoiceNoteOpen] = useState(false);
   const [sessionMinutes, setSessionMinutes] = useState(0);
   const [activePage, setActivePage] = useState(0);
   const pageScrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!scopeBrief) return;
+
+    if (diseaseFlowOpen) {
+      return;
+    }
+
+    if (pestFlowOpen) {
+      return;
+    }
+
+    if (weedFlowOpen) {
+      return;
+    }
+
+    if (moistureFlowOpen) {
+      return;
+    }
+
+    if (populationFlowOpen) {
+      return;
+    }
+
+    if (activePage === 1) {
+      scopeBrief.setActiveSectionId("flows");
+      return;
+    }
+
+    scopeBrief.setActiveSectionId("log-observation");
+  }, [
+    activePage,
+    diseaseFlowOpen,
+    moistureFlowOpen,
+    pestFlowOpen,
+    populationFlowOpen,
+    scopeBrief,
+    weedFlowOpen,
+  ]);
 
   useEffect(() => {
     const start = Date.now();
@@ -61,7 +109,7 @@ export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
     const interval = window.setInterval(updateSessionMinutes, 10000);
 
     return () => window.clearInterval(interval);
-  }, []);
+  }, [sessionKey]);
 
   function handleSaveObservation(
     type: ObservationType,
@@ -70,7 +118,8 @@ export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
     otherDetails?: OtherObservationDetails,
     weedDetails?: WeedObservationDetails,
     pestDetails?: PestObservationDetails,
-    moistureDetails?: MoistureObservationDetails
+    moistureDetails?: MoistureObservationDetails,
+    populationDetails?: PopulationObservationDetails
   ) {
     setObservations((prev) => [
       ...prev,
@@ -83,7 +132,8 @@ export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
         undefined,
         pestDetails,
         moistureDetails,
-        task.fieldId
+        populationDetails,
+        field.id
       ),
     ]);
   }
@@ -100,7 +150,8 @@ export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
         details,
         undefined,
         undefined,
-        task.fieldId
+        undefined,
+        field.id
       ),
     ]);
   }
@@ -131,11 +182,21 @@ export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
       return;
     }
 
+    if (type === "population") {
+      setPopulationFlowOpen(true);
+      return;
+    }
+
     setActiveObservationType(type);
   }
 
+  function closePopulationFlow() {
+    setPopulationFlowOpen(false);
+    setPopulationMethod((current) => (current === "square" ? "row" : "square"));
+  }
+
   function handleEndSession() {
-    router.push("/dashboard");
+    onEndSession(observations);
   }
 
   function handlePageScroll() {
@@ -170,14 +231,11 @@ export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
   );
 
   return (
-    <MobileShell>
-      <div className="gradient-brand h-1.5 w-full shrink-0" />
-
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="shrink-0 border-b border-border/60 bg-surface-elevated px-7 pb-4 pt-4">
           <div className="mb-0.5 flex items-center justify-between gap-4">
             <p className="min-w-0 truncate text-sm font-semibold text-navy">
-              <span className="text-muted">Crop:</span> {task.commodity}
+              <span className="text-muted">Crop:</span> {field.crop}
             </p>
             <p className="shrink-0 text-sm font-semibold text-teal">
               {observations.length}{" "}
@@ -186,7 +244,7 @@ export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
           </div>
           <div className="flex items-center justify-between gap-4">
             <p className="min-w-0 truncate text-sm font-semibold text-navy">
-              <span className="text-muted">Field:</span> {field?.name ?? task.location}
+              <span className="text-muted">Field:</span> {field.name}
             </p>
             <p className="shrink-0 text-sm font-semibold text-teal">
               {sessionMinutes}{" "}
@@ -207,12 +265,20 @@ export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
               </h2>
 
               <div className="flex min-h-0 flex-1 flex-col gap-3.5">
-                {[0, 1, 2].map((rowIndex) => (
+                {[0, 1, 2].map((rowIndex) => {
+                  const rowTiles = LOG_OBSERVATION_TILE_TYPES.slice(
+                    rowIndex * 2,
+                    rowIndex * 2 + 2
+                  );
+
+                  if (rowTiles.length === 0) return null;
+
+                  return (
                   <div
                     key={rowIndex}
                     className="grid min-h-0 flex-1 grid-cols-2 gap-3"
                   >
-                    {OBSERVATION_TYPES.slice(rowIndex * 2, rowIndex * 2 + 2).map(
+                    {rowTiles.map(
                       (observation) => {
                         const count = observationCounts[observation.id] ?? 0;
 
@@ -223,53 +289,64 @@ export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
                             onPointerDown={(event) => event.stopPropagation()}
                             onClick={() => handleObservationSelect(observation.id)}
                             className={[
-                              "relative flex h-full min-h-0 cursor-pointer touch-manipulation flex-col rounded-2xl px-3.5 py-5 text-left transition-all active:scale-[0.98]",
+                              "relative flex h-full min-h-0 cursor-pointer touch-manipulation flex-col overflow-hidden rounded-2xl p-4 text-left shadow-sm transition-all active:scale-[0.98] active:shadow-md",
                               observation.tileClass,
                               observation.borderClass,
+                              rowTiles.length === 1 ? "col-span-2" : "",
                             ].join(" ")}
                           >
                             {count > 0 && (
                               <span
                                 className={[
-                                  "pointer-events-none absolute right-2.5 top-2.5 flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-xs font-bold",
+                                  "pointer-events-none absolute right-3 top-3 z-10 flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-xs font-bold",
                                   observation.badgeClass,
                                 ].join(" ")}
                               >
                                 {count}
                               </span>
                             )}
-                            <span className={["pointer-events-none", observation.iconClass].join(" ")}>
-                              <ObservationIcon
-                                type={observation.id}
-                                className="h-10 w-10"
-                              />
+                            <span
+                              className={[
+                                "pointer-events-none relative z-10 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl",
+                                observation.iconContainerClass,
+                              ].join(" ")}
+                            >
+                              {observation.emoji ?? (
+                                <ObservationIcon
+                                  type={observation.id}
+                                  className="h-5 w-5"
+                                />
+                              )}
                             </span>
-                            <span className="pointer-events-none mt-auto">
+                            <span className="pointer-events-none relative z-10 mt-3">
                               <span
                                 className={[
-                                  "block text-lg font-semibold leading-tight tracking-tight",
+                                  "block text-[0.9375rem] font-bold leading-tight",
                                   observation.textClass,
                                 ].join(" ")}
                               >
                                 {observation.label}
                               </span>
                               {observation.supportText && (
-                                <span
-                                  className={[
-                                    "mt-1 block text-xs font-normal leading-snug opacity-60",
-                                    observation.textClass,
-                                  ].join(" ")}
-                                >
+                                <span className="mt-1 block text-xs leading-snug text-muted">
                                   {observation.supportText}
                                 </span>
                               )}
                             </span>
+                            <span
+                              className={[
+                                "pointer-events-none absolute -bottom-5 -right-5 z-0 h-20 w-20 rounded-full",
+                                observation.accentClass,
+                              ].join(" ")}
+                              aria-hidden="true"
+                            />
                           </button>
                         );
                       }
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </main>
 
@@ -299,7 +376,6 @@ export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
           </div>
           <HoldToEndButton onEnd={handleEndSession} />
         </div>
-      </div>
 
       <LogObservationSheet
         open={
@@ -307,7 +383,8 @@ export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
           activeObservationType !== "disease" &&
           activeObservationType !== "pest" &&
           activeObservationType !== "weed" &&
-          activeObservationType !== "moisture"
+          activeObservationType !== "moisture" &&
+          activeObservationType !== "population"
         }
         type={activeObservationType}
         onClose={() => setActiveObservationType(null)}
@@ -316,14 +393,14 @@ export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
 
       <DiseaseObservationFlow
         open={diseaseFlowOpen}
-        commodity={task.commodity}
+        commodity={field.crop}
         onClose={() => setDiseaseFlowOpen(false)}
         onSave={(note, details) => handleSaveObservation("disease", note, details)}
       />
 
       <PestObservationFlow
         open={pestFlowOpen}
-        commodity={task.commodity}
+        commodity={field.crop}
         onClose={() => setPestFlowOpen(false)}
         onSave={(note, details) =>
           handleSaveObservation("pest", note, undefined, undefined, undefined, details)
@@ -332,7 +409,7 @@ export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
 
       <WeedObservationFlow
         open={weedFlowOpen}
-        commodity={task.commodity}
+        commodity={field.crop}
         onClose={() => setWeedFlowOpen(false)}
         onSave={(note, details) =>
           handleSaveObservation("weed", note, undefined, undefined, details)
@@ -355,10 +432,28 @@ export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
         }
       />
 
+      <PopulationObservationFlow
+        open={populationFlowOpen}
+        method={populationMethod}
+        onClose={closePopulationFlow}
+        onSave={(note, details) =>
+          handleSaveObservation(
+            "population",
+            note,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            details
+          )
+        }
+      />
+
       {mapOpen && (
         <ObservationMapOverlay
           observations={observations}
-          fieldId={task.fieldId}
+          fieldId={field.id}
           onClose={() => setMapOpen(false)}
         />
       )}
@@ -368,85 +463,6 @@ export function ScoutingSessionView({ task }: ScoutingSessionViewProps) {
         onClose={() => setVoiceNoteOpen(false)}
         onSubmit={handleSubmitVoiceNote}
       />
-    </MobileShell>
+    </div>
   );
 }
-
-function ObservationIcon({
-  type,
-  className = "h-10 w-10",
-}: {
-  type: ObservationType;
-  className?: string;
-}) {
-  return (
-    <svg
-      className={[className, "pointer-events-none"].join(" ")}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      {observationIcons[type]}
-    </svg>
-  );
-}
-
-const observationIcons: Record<ObservationType, ReactNode> = {
-  disease: (
-    <>
-      <circle cx="12" cy="12" r="3.5" />
-      <path d="M12 2v2.5" />
-      <path d="M12 19.5V22" />
-      <path d="m4.5 4.5 1.8 1.8" />
-      <path d="m17.7 17.7 1.8 1.8" />
-      <path d="M2 12h2.5" />
-      <path d="M19.5 12H22" />
-      <path d="m4.5 19.5 1.8-1.8" />
-      <path d="m17.7 6.3 1.8-1.8" />
-    </>
-  ),
-  pest: (
-    <>
-      <ellipse cx="12" cy="13" rx="5" ry="6" />
-      <circle cx="12" cy="7" r="2.5" />
-      <path d="M7 11 4 9" />
-      <path d="M17 11l3-2" />
-      <path d="M7 16 4 18" />
-      <path d="M17 16l3 2" />
-      <path d="M9 7 7 4" />
-      <path d="M15 7l2-3" />
-    </>
-  ),
-  weed: (
-    <>
-      <path d="M12 22V11" />
-      <path d="M12 11C12 7.5 8.5 4 5 4c0 3.5 3.5 7 7 7" />
-      <path d="M12 11c0-3.5 3.5-7 7-7 0 3.5-3.5 7-7 7" />
-      <path d="M12 11c0-2 1.5-4 3.5-5" />
-    </>
-  ),
-  moisture: (
-    <>
-      <path d="M12 2.69c2.5 3 5 6.5 5 9.5a5 5 0 0 1-10 0c0-3 2.5-6.5 5-9.5Z" />
-      <path d="M7 14.5h10" />
-    </>
-  ),
-  other: (
-    <>
-      <circle cx="12" cy="12" r="1" />
-      <circle cx="19" cy="12" r="1" />
-      <circle cx="5" cy="12" r="1" />
-    </>
-  ),
-  voice_note: (
-    <>
-      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-      <path d="M12 19v3" />
-    </>
-  ),
-};

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useScopeBriefOptional } from "@/components/ScopeBriefContext";
 import { CameraCaptureView } from "@/components/CameraCaptureView";
 import { DiseaseDetailPage } from "@/components/DiseaseDetailPage";
 import { DiseaseSymptomMatchPage } from "@/components/DiseaseSymptomMatchPage";
@@ -9,7 +10,6 @@ import {
   EMPTY_DISEASE_DETAILS,
   formatDiseaseSummary,
   getDiseaseCategory,
-  getDiseaseSpecificType,
   ObservationMediaItem,
 } from "@/lib/observations";
 
@@ -35,6 +35,7 @@ export function DiseaseObservationFlow({
   );
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraPurpose, setCameraPurpose] = useState<CameraPurpose>("other");
+  const scopeBrief = useScopeBriefOptional();
 
   useEffect(() => {
     if (open) {
@@ -45,6 +46,14 @@ export function DiseaseObservationFlow({
     }
   }, [open]);
 
+  useEffect(() => {
+    if (!open || !scopeBrief) return;
+
+    scopeBrief.setActiveSectionId(
+      step === "symptom_match" ? "disease-selection" : "disease-detail"
+    );
+  }, [open, scopeBrief, step]);
+
   if (!open) return null;
 
   function handleClose() {
@@ -52,23 +61,18 @@ export function DiseaseObservationFlow({
     onClose();
   }
 
-  function handleSelectCategory(categoryId: string, specificTypeId?: string) {
+  function handleSelectCategory(categoryId: string) {
     const category = getDiseaseCategory(categoryId);
     if (!category) return;
 
-    const specificType = specificTypeId
-      ? getDiseaseSpecificType(specificTypeId)
-      : undefined;
-
     setDetails({
       ...EMPTY_DISEASE_DETAILS,
-      disease: specificType?.diseaseValue ?? category.label,
-      diseaseLabel: specificType?.label ?? category.label,
-      diseaseImageSrc: specificType?.imageSrc ?? category.imageSrc,
+      disease: category.label,
+      diseaseLabel: category.label,
+      diseaseImageSrc: category.imageSrc,
       diseaseCategoryId: category.id,
       diseaseCategoryLabel: category.label,
       diseaseCategoryImageSrc: category.imageSrc,
-      diseaseSpecificTypeId: specificType?.id ?? "",
     });
     setStep("detail");
   }
@@ -137,6 +141,7 @@ export function DiseaseObservationFlow({
         />
       ) : (
         <DiseaseDetailPage
+          key={`${details.diseaseCategoryId}-${details.diseaseImageSrc}`}
           commodity={commodity}
           details={details}
           onChange={setDetails}

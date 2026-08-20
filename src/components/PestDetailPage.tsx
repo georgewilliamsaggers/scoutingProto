@@ -2,19 +2,21 @@
 
 import Image from "next/image";
 import { useRef, useState } from "react";
-import { HoldToRecordVoiceNote } from "@/components/HoldToRecordVoiceNote";
 import {
-  PestObservationDetails,
-  FIELD_PREVALENCE_LABELS,
   formatMediaUploadTime,
   getPestDisplayName,
   getPestSpecificType,
   getPestSpecificTypesForCategory,
   ObservationMediaItem,
+  PEST_AMOUNT_LABELS,
+  PEST_DAMAGE_LABELS,
   PEST_INFECTED_PARTS,
-  PLANTS_AFFECTED_LABELS,
-  SEVERITY_SCALE_LABELS,
+  PestObservationDetails,
 } from "@/lib/observations";
+
+type DetailStep = "type" | "infected-part" | "scales" | "notes";
+
+const DETAIL_STEPS: DetailStep[] = ["type", "infected-part", "scales", "notes"];
 
 interface PestDetailPageProps {
   commodity: string;
@@ -33,19 +35,15 @@ export function PestDetailPage({
   onOpenCamera,
   onSave,
 }: PestDetailPageProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [scrollTop, setScrollTop] = useState(0);
-  const canSave = details.infectedParts.length > 0;
+  const [step, setStep] = useState<DetailStep>("type");
+  const stepIndex = DETAIL_STEPS.indexOf(step);
 
-  const collapseDistance = 96;
-  const collapse = Math.min(scrollTop / collapseDistance, 1);
-  const imageSize = 64 - collapse * 36;
-  const flagSize = 40 - collapse * 8;
-  const titleSize = 20 - collapse * 4;
-  const backSpacing = 16 - collapse * 12;
-  const headerSpacing = 24 - collapse * 24;
-  const showMeta = collapse < 0.45;
-  const showSpecificSubtitle = collapse < 0.3;
+  const specificTypes = getPestSpecificTypesForCategory(details.pestCategoryId);
+  const isOtherFlow = details.pestCategoryId === "other";
+  const selectedSpecificType = details.pestSpecificTypeId
+    ? getPestSpecificType(details.pestSpecificTypeId)
+    : undefined;
+  const headerTitle = getPestDisplayName(details);
 
   function updateField<K extends keyof PestObservationDetails>(
     key: K,
@@ -88,352 +86,477 @@ export function PestDetailPage({
     });
   }
 
-  const specificTypes = getPestSpecificTypesForCategory(details.pestCategoryId);
-  const isOtherFlow = details.pestCategoryId === "other";
-  const selectedSpecificType = details.pestSpecificTypeId
-    ? getPestSpecificType(details.pestSpecificTypeId)
-    : undefined;
-  const headerTitle = getPestDisplayName(details);
+  function goBack() {
+    if (stepIndex === 0) {
+      onBack();
+      return;
+    }
+    setStep(DETAIL_STEPS[stepIndex - 1]);
+  }
+
+  function goNext() {
+    if (stepIndex >= DETAIL_STEPS.length - 1) return;
+    setStep(DETAIL_STEPS[stepIndex + 1]);
+  }
+
+  function goToStep(targetIndex: number) {
+    if (targetIndex < 0 || targetIndex >= DETAIL_STEPS.length) return;
+    if (targetIndex > stepIndex) return;
+    setStep(DETAIL_STEPS[targetIndex]);
+  }
+
+  const canProceed =
+    step === "type" ||
+    (step === "infected-part" && details.infectedParts.length > 0) ||
+    step === "scales";
 
   return (
     <div className="absolute inset-0 z-50 flex flex-col bg-surface-elevated">
-      <div
-        className={[
-          "shrink-0 px-5 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[border-color,padding]",
-          collapse > 0.05 ? "border-b border-border/60" : "border-b border-transparent",
-        ].join(" ")}
-        style={{ paddingBottom: `${8 + (1 - collapse) * 8}px` }}
-      >
-        <div style={{ marginBottom: `${backSpacing}px` }}>
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex items-center gap-1 text-sm font-semibold text-navy transition-colors active:text-teal"
-          >
-            <ChevronLeftIcon />
-            Back
-          </button>
-        </div>
+      <PestDetailHeader
+        commodity={commodity}
+        details={details}
+        headerTitle={headerTitle}
+        selectedSpecificTypeLabel={selectedSpecificType?.label}
+        isOtherFlow={isOtherFlow}
+        onBack={goBack}
+        onToggleFlag={() =>
+          updateField("flaggedForFollowUp", !details.flaggedForFollowUp)
+        }
+      />
 
-        <div
-          className="flex items-center gap-3"
-          style={{ marginBottom: `${headerSpacing}px` }}
-        >
-          <div
-            className="relative shrink-0 overflow-hidden rounded-xl border border-border/60 bg-surface transition-[width,height,border-radius]"
-            style={{
-              width: `${imageSize}px`,
-              height: `${imageSize}px`,
-              borderRadius: `${12 - collapse * 4}px`,
-            }}
-          >
-            {details.pestImageSrc ? (
-              details.pestImageSrc.startsWith("blob:") ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={details.pestImageSrc}
-                  alt={headerTitle}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <Image
-                  src={details.pestImageSrc}
-                  alt={headerTitle}
-                  fill
-                  className="object-cover"
-                  sizes="64px"
-                />
-              )
-            ) : null}
-          </div>
+      <StepProgress
+        currentStep={stepIndex + 1}
+        totalSteps={DETAIL_STEPS.length}
+        onStepSelect={(stepNumber) => goToStep(stepNumber - 1)}
+      />
 
-          <div className="min-w-0 flex-1">
-            {showMeta && (
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-                {commodity} pest
-              </p>
-            )}
-            <p
-              className="truncate font-bold leading-tight text-navy"
-              style={{ fontSize: `${titleSize}px` }}
-            >
-              {headerTitle}
-            </p>
-            {!isOtherFlow && selectedSpecificType && showSpecificSubtitle && (
-              <p className="truncate text-sm font-semibold text-teal">
-                {selectedSpecificType.label}
-              </p>
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={() =>
-              updateField("flaggedForFollowUp", !details.flaggedForFollowUp)
-            }
-            aria-label={
-              details.flaggedForFollowUp
-                ? "Remove follow up flag"
-                : "Flag for follow up"
-            }
-            aria-pressed={details.flaggedForFollowUp}
-            className={[
-              "flex shrink-0 items-center justify-center rounded-full transition-colors",
-              details.flaggedForFollowUp
-                ? "bg-amber-100 text-amber-700"
-                : "text-muted hover:bg-surface hover:text-navy",
-            ].join(" ")}
-            style={{ width: `${flagSize}px`, height: `${flagSize}px` }}
-          >
-            <FlagIcon filled={details.flaggedForFollowUp} />
-          </button>
-        </div>
-      </div>
-
-      <div
-        ref={scrollRef}
-        onScroll={() => setScrollTop(scrollRef.current?.scrollTop ?? 0)}
-        className="flex-1 overflow-y-auto px-5 pb-4"
-      >
-        {isOtherFlow ? (
-          <section className="mb-8">
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-              Pest name
-            </p>
-            <h2 className="mb-1 text-lg font-bold text-navy">What did you find?</h2>
-            <p className="mb-4 text-sm text-muted">
-              Optional — leave blank if you are not sure
-            </p>
-            <input
-              type="text"
-              value={details.pestOther}
-              onChange={(e) => {
-                const value = e.target.value;
-                onChange({
-                  ...details,
-                  pestOther: value,
-                  pestLabel: value.trim() || "Pest",
-                });
-              }}
-              placeholder="Enter pest name…"
-              className="h-11 w-full rounded-xl border border-border bg-surface px-4 text-sm text-navy outline-none transition-all placeholder:text-muted/60 focus:border-lime focus:ring-2 focus:ring-lime/20"
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div key={step} className="step-enter min-h-0 flex-1 overflow-y-auto px-5 pb-4">
+          {step === "type" && (
+            <TypeStep
+              details={details}
+              isOtherFlow={isOtherFlow}
+              specificTypes={specificTypes}
+              onChange={onChange}
+              onToggleSpecificType={toggleSpecificType}
             />
-          </section>
-        ) : (
-          specificTypes.length > 0 && (
-          <section className="mb-8">
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-              Specific type
-            </p>
-            <h2 className="mb-1 text-lg font-bold text-navy">
-              Which {details.pestCategoryLabel.toLowerCase()} is it?
-            </h2>
-            <p className="mb-4 text-sm text-muted">Optional — select if you can identify it</p>
+          )}
 
-            <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {specificTypes.map((type) => {
-                const selected = details.pestSpecificTypeId === type.id;
+          {step === "infected-part" && (
+            <InfectedPartStep
+              infectedParts={details.infectedParts}
+              onToggle={toggleInfectedPart}
+            />
+          )}
 
-                return (
-                  <button
-                    key={type.id}
-                    type="button"
-                    onClick={() => toggleSpecificType(type.id)}
-                    aria-pressed={selected}
-                    className={[
-                      "w-[9.5rem] shrink-0 overflow-hidden rounded-2xl border text-left transition-all active:scale-[0.98]",
-                      selected
-                        ? "border-lime bg-lime/5 ring-2 ring-lime/30"
-                        : "border-border/80 bg-surface-elevated",
-                    ].join(" ")}
-                  >
-                    <div className="relative aspect-[4/3] w-full bg-surface">
-                      <Image
-                        src={type.imageSrc}
-                        alt={type.label}
-                        fill
-                        className="object-cover"
-                        sizes="152px"
-                      />
-                    </div>
-                    <div className="px-2.5 py-2">
-                      <p className="text-xs font-bold leading-tight text-navy">{type.label}</p>
-                      <p className="mt-1 line-clamp-3 text-[10px] leading-snug text-muted">
-                        {type.description}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-          )
-        )}
+          {step === "scales" && (
+            <ScalesStep
+              pestCountScale={details.pestCountScale}
+              damageSeverityScale={details.damageSeverityScale}
+              onCountChange={(value) => updateField("pestCountScale", value)}
+              onDamageChange={(value) => updateField("damageSeverityScale", value)}
+            />
+          )}
 
-        <section className="mb-8">
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-            Infected part
-          </p>
-          <h2 className="mb-4 text-lg font-bold text-navy">What part is infected?</h2>
-
-          <div className="grid grid-cols-2 gap-2.5">
-            {PEST_INFECTED_PARTS.map((part) => {
-              const selected = details.infectedParts.includes(part);
-
-              return (
-                <button
-                  key={part}
-                  type="button"
-                  onClick={() => toggleInfectedPart(part)}
-                  aria-pressed={selected}
-                  className={[
-                    "rounded-xl border px-3 py-3 text-sm font-semibold transition-all active:scale-[0.98]",
-                    selected
-                      ? "border-lime bg-lime/10 text-lime"
-                      : "border-border bg-surface-elevated text-muted",
-                  ].join(" ")}
-                >
-                  {part}
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        <ScaleSection
-          stepNumber={1}
-          title="Field prevalence"
-          question="How far has it spread?"
-          value={details.fieldPrevalence}
-          valueLabel={FIELD_PREVALENCE_LABELS[details.fieldPrevalence - 1]}
-          minLabel={FIELD_PREVALENCE_LABELS[0]}
-          midLabel={FIELD_PREVALENCE_LABELS[2]}
-          maxLabel={FIELD_PREVALENCE_LABELS[4]}
-          onChange={(value) => updateField("fieldPrevalence", value)}
-        />
-
-        <ScaleSection
-          stepNumber={2}
-          title="Pest count"
-          question="How many can you see?"
-          value={details.pestCountScale}
-          valueLabel={PLANTS_AFFECTED_LABELS[details.pestCountScale - 1]}
-          minLabel={PLANTS_AFFECTED_LABELS[0]}
-          midLabel={PLANTS_AFFECTED_LABELS[2]}
-          maxLabel={PLANTS_AFFECTED_LABELS[4]}
-          onChange={(value) => updateField("pestCountScale", value)}
-        />
-
-        <ScaleSection
-          stepNumber={3}
-          title="Damage severity"
-          question="How serious is the damage?"
-          value={details.damageSeverityScale}
-          valueLabel={SEVERITY_SCALE_LABELS[details.damageSeverityScale - 1]}
-          minLabel={SEVERITY_SCALE_LABELS[0]}
-          midLabel={SEVERITY_SCALE_LABELS[2]}
-          maxLabel={SEVERITY_SCALE_LABELS[4]}
-          onChange={(value) => updateField("damageSeverityScale", value)}
-        />
-
-        <section className="mb-8">
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-            Photos
-          </p>
-          <h2 className="mb-4 text-lg font-bold text-navy">Add supporting images</h2>
-          <ObservationMediaSection
-            media={details.media}
-            onMediaChange={(media) => updateField("media", media)}
-            onOpenCamera={onOpenCamera}
-          />
-        </section>
-
-        <section className="mb-4">
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-            Notes
-          </p>
-          <h2 className="mb-4 text-lg font-bold text-navy">Anything else to add?</h2>
-          <textarea
-            value={details.otherNotes}
-            onChange={(e) => updateField("otherNotes", e.target.value)}
-            rows={4}
-            placeholder="Add any additional observations…"
-            className="w-full resize-none rounded-xl border border-border bg-surface px-4 py-3 text-sm text-navy outline-none transition-all placeholder:text-muted/60 focus:border-lime focus:ring-2 focus:ring-lime/20"
-          />
-          <HoldToRecordVoiceNote
-            value={details.voiceNote}
-            onChange={(voiceNote) => updateField("voiceNote", voiceNote)}
-          />
-        </section>
+          {step === "notes" && (
+            <NotesStep
+              details={details}
+              onNotesChange={(value) => updateField("otherNotes", value)}
+              onMediaChange={(media) => updateField("media", media)}
+              onOpenCamera={onOpenCamera}
+            />
+          )}
+        </div>
       </div>
 
       <div className="shrink-0 border-t border-border/60 px-5 py-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+        {step === "notes" ? (
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={details.infectedParts.length === 0}
+            className="btn-primary-block disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+          >
+            Confirm observation
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={goNext}
+            disabled={!canProceed}
+            className="btn-primary-block disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+          >
+            Next
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PestDetailHeader({
+  commodity,
+  details,
+  headerTitle,
+  selectedSpecificTypeLabel,
+  isOtherFlow,
+  onBack,
+  onToggleFlag,
+}: {
+  commodity: string;
+  details: PestObservationDetails;
+  headerTitle: string;
+  selectedSpecificTypeLabel?: string;
+  isOtherFlow: boolean;
+  onBack: () => void;
+  onToggleFlag: () => void;
+}) {
+  return (
+    <div className="shrink-0 border-b border-border/60 px-5 pb-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
+      <div className="mb-4">
         <button
           type="button"
-          onClick={onSave}
-          disabled={!canSave}
-          className="gradient-brand flex h-12 w-full items-center justify-center rounded-xl text-base font-semibold text-white shadow-lg shadow-lime/25 transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+          onClick={onBack}
+          className="flex items-center gap-1 text-sm font-semibold text-navy transition-colors active:text-teal"
         >
-          Save observation
+          <ChevronLeftIcon />
+          Back
+        </button>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-border/60 bg-surface">
+          {details.pestImageSrc ? (
+            details.pestImageSrc.startsWith("blob:") ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={details.pestImageSrc}
+                alt={headerTitle}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <Image
+                src={details.pestImageSrc}
+                alt={headerTitle}
+                fill
+                className="object-cover"
+                sizes="64px"
+              />
+            )
+          ) : null}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+            {commodity} pest
+          </p>
+          <p className="truncate text-xl font-bold leading-tight text-navy">
+            {headerTitle}
+          </p>
+          {!isOtherFlow && selectedSpecificTypeLabel && (
+            <p className="truncate text-sm font-semibold text-teal">
+              {selectedSpecificTypeLabel}
+            </p>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={onToggleFlag}
+          aria-label={
+            details.flaggedForFollowUp
+              ? "Remove follow up flag"
+              : "Flag for follow up"
+          }
+          aria-pressed={details.flaggedForFollowUp}
+          className={[
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors",
+            details.flaggedForFollowUp
+              ? "bg-amber-100 text-amber-700"
+              : "text-muted hover:bg-surface hover:text-navy",
+          ].join(" ")}
+        >
+          <FlagIcon filled={details.flaggedForFollowUp} />
         </button>
       </div>
     </div>
   );
 }
 
-function ScaleSection({
-  stepNumber,
-  title,
-  question,
-  value,
-  valueLabel,
-  minLabel,
-  midLabel,
-  maxLabel,
-  onChange,
+function StepProgress({
+  currentStep,
+  totalSteps,
+  onStepSelect,
 }: {
-  stepNumber: number;
-  title: string;
-  question: string;
-  value: number;
-  valueLabel: string;
-  minLabel: string;
-  midLabel: string;
-  maxLabel: string;
-  onChange: (value: number) => void;
+  currentStep: number;
+  totalSteps: number;
+  onStepSelect: (step: number) => void;
 }) {
-  const fillPercent = ((value - 1) / 4) * 100;
+  return (
+    <div className="shrink-0 border-b border-border/40 bg-surface px-5 py-3">
+      <div className="flex gap-1.5">
+        {Array.from({ length: totalSteps }, (_, index) => {
+          const stepNumber = index + 1;
+          const isReached = stepNumber <= currentStep;
+
+          return (
+            <button
+              key={index}
+              type="button"
+              onClick={() => isReached && onStepSelect(stepNumber)}
+              disabled={!isReached}
+              aria-label={`Go to step ${stepNumber}`}
+              aria-current={stepNumber === currentStep ? "step" : undefined}
+              className={[
+                "h-1 flex-1 rounded-full transition-colors duration-300",
+                isReached ? "bg-teal" : "bg-border",
+                isReached ? "cursor-pointer hover:bg-teal-deep/80" : "cursor-default",
+              ].join(" ")}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function TypeStep({
+  details,
+  isOtherFlow,
+  specificTypes,
+  onChange,
+  onToggleSpecificType,
+}: {
+  details: PestObservationDetails;
+  isOtherFlow: boolean;
+  specificTypes: ReturnType<typeof getPestSpecificTypesForCategory>;
+  onChange: (details: PestObservationDetails) => void;
+  onToggleSpecificType: (typeId: string) => void;
+}) {
+  if (isOtherFlow) {
+    return (
+      <section className="pt-2">
+        <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#e87722]">
+          Pest name
+        </p>
+        <h2 className="mb-1 text-lg font-bold text-navy">What did you find?</h2>
+        <p className="mb-4 text-sm text-muted">
+          Optional — leave blank if you are not sure
+        </p>
+        <input
+          type="text"
+          value={details.pestOther}
+          onChange={(e) => {
+            const value = e.target.value;
+            onChange({
+              ...details,
+              pestOther: value,
+              pestLabel: value.trim() || "Pest",
+            });
+          }}
+          placeholder="Enter pest name…"
+          className="h-11 w-full rounded-xl border border-border bg-surface px-4 text-sm text-navy outline-none transition-all placeholder:text-muted/60 focus:border-teal focus:ring-2 focus:ring-teal/20"
+        />
+      </section>
+    );
+  }
+
+  if (specificTypes.length === 0) {
+    return (
+      <section className="pt-2">
+        <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#e87722]">
+          Pest type
+        </p>
+        <h2 className="mb-2 text-lg font-bold text-navy">
+          {details.pestCategoryLabel}
+        </h2>
+        <p className="text-sm text-muted">
+          No sub-types for this category. Tap Next to continue.
+        </p>
+      </section>
+    );
+  }
 
   return (
-    <section className="mb-8">
-      <div className="mb-1 flex items-start justify-between gap-3">
+    <section className="pt-2">
+      <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#e87722]">
+        Specific type
+      </p>
+      <h2 className="mb-1 text-lg font-bold text-navy">
+        Which {details.pestCategoryLabel.toLowerCase()} is it?
+      </h2>
+      <p className="mb-4 text-sm text-muted">
+        Optional — select if you can identify it
+      </p>
+
+      <div className="space-y-2.5">
+        {specificTypes.map((type) => {
+          const selected = details.pestSpecificTypeId === type.id;
+
+          return (
+            <button
+              key={type.id}
+              type="button"
+              onClick={() => onToggleSpecificType(type.id)}
+              aria-pressed={selected}
+              className={[
+                "flex w-full items-center gap-3 overflow-hidden rounded-2xl border p-3 text-left transition-all active:scale-[0.98]",
+                selected
+                  ? "border-teal bg-teal/5 ring-2 ring-teal/20"
+                  : "border-border/80 bg-surface-elevated shadow-sm",
+              ].join(" ")}
+            >
+              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface">
+                <Image
+                  src={type.imageSrc}
+                  alt={type.label}
+                  fill
+                  className="object-cover"
+                  sizes="64px"
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-navy">{type.label}</p>
+                <p className="mt-0.5 line-clamp-2 text-xs text-muted">
+                  {type.description}
+                </p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function InfectedPartStep({
+  infectedParts,
+  onToggle,
+}: {
+  infectedParts: string[];
+  onToggle: (part: string) => void;
+}) {
+  return (
+    <section className="pt-2">
+      <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#e87722]">
+        Infected part
+      </p>
+      <h2 className="mb-4 text-lg font-bold text-navy">What part is infected?</h2>
+
+      <div className="grid grid-cols-2 gap-2.5">
+        {PEST_INFECTED_PARTS.map((part) => {
+          const selected = infectedParts.includes(part);
+
+          return (
+            <button
+              key={part}
+              type="button"
+              onClick={() => onToggle(part)}
+              aria-pressed={selected}
+              className={[
+                "rounded-xl border px-3 py-3.5 text-sm font-semibold transition-all active:scale-[0.98]",
+                selected
+                  ? "border-teal bg-teal/10 text-teal"
+                  : "border-border bg-surface-elevated text-muted",
+              ].join(" ")}
+            >
+              {part}
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function ScalesStep({
+  pestCountScale,
+  damageSeverityScale,
+  onCountChange,
+  onDamageChange,
+}: {
+  pestCountScale: number;
+  damageSeverityScale: number;
+  onCountChange: (value: number) => void;
+  onDamageChange: (value: number) => void;
+}) {
+  return (
+    <section className="space-y-4 pt-2">
+      <PestScaleCard
+        label="Amount"
+        question="How many can you see?"
+        value={pestCountScale}
+        options={PEST_AMOUNT_LABELS}
+        accentColor="#e87722"
+        trackColor="#f0e6dc"
+        onChange={onCountChange}
+      />
+      <PestScaleCard
+        label="Damage"
+        question="How badly is the crop affected?"
+        value={damageSeverityScale}
+        options={PEST_DAMAGE_LABELS}
+        accentColor="#b85c38"
+        trackColor="#f0e6dc"
+        onChange={onDamageChange}
+      />
+    </section>
+  );
+}
+
+function PestScaleCard({
+  label,
+  question,
+  value,
+  options,
+  accentColor,
+  trackColor,
+  onChange,
+}: {
+  label: string;
+  question: string;
+  value: number;
+  options: readonly string[];
+  accentColor: string;
+  trackColor: string;
+  onChange: (value: number) => void;
+}) {
+  const fillPercent = ((value - 1) / (options.length - 1)) * 100;
+
+  return (
+    <div className="rounded-2xl border border-border/80 bg-surface-elevated p-4 shadow-sm">
+      <div className="mb-3 flex items-start justify-between gap-3">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-            {title}
+          <p
+            className="text-[11px] font-semibold uppercase tracking-[0.12em]"
+            style={{ color: accentColor }}
+          >
+            {label}
           </p>
-          <h2 className="mt-1 text-lg font-bold text-navy">{question}</h2>
+          <h3 className="mt-1 text-base font-bold text-navy">{question}</h3>
         </div>
-        <span className="text-3xl font-bold tabular-nums text-[#c4a882]/80">
-          {stepNumber}
+        <span
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold tabular-nums"
+          style={{ backgroundColor: `${accentColor}18`, color: accentColor }}
+        >
+          {value}
         </span>
       </div>
 
-      <div className="mb-4 flex items-center justify-between rounded-2xl bg-[#fff4e6] px-4 py-3">
-        <p className="text-base font-bold text-[#e87722]">{valueLabel}</p>
-        <p className="text-xs font-medium text-muted">{value} of 5</p>
-      </div>
-
-      <div className="relative px-1">
-        <div className="relative h-2 rounded-full bg-[#f0e6dc]">
+      <div className="relative px-0.5">
+        <div
+          className="relative h-2 rounded-full"
+          style={{ backgroundColor: trackColor }}
+        >
           <div
-            className="absolute inset-y-0 left-0 rounded-full bg-[#e87722]"
-            style={{ width: `${fillPercent}%` }}
+            className="absolute inset-y-0 left-0 rounded-full transition-all duration-200"
+            style={{ width: `${fillPercent}%`, backgroundColor: accentColor }}
           />
         </div>
         <input
           type="range"
           min={1}
-          max={5}
+          max={options.length}
           step={1}
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
@@ -442,10 +565,73 @@ function ScaleSection({
         />
       </div>
 
-      <div className="mt-2 flex justify-between text-xs font-medium text-muted">
-        <span>{minLabel}</span>
-        <span>{midLabel}</span>
-        <span>{maxLabel}</span>
+      <div className="mt-3 flex justify-between gap-1">
+        {options.map((option, index) => {
+          const optionValue = index + 1;
+          const selected = value === optionValue;
+
+          return (
+            <div key={option} className="flex min-w-0 flex-1 flex-col items-center gap-1">
+              <span
+                className={[
+                  "h-1.5 w-1.5 rounded-full transition-colors",
+                  selected ? "opacity-100" : "opacity-0",
+                ].join(" ")}
+                style={{ backgroundColor: selected ? accentColor : "transparent" }}
+              />
+              <span
+                className={[
+                  "text-center text-[10px] leading-tight",
+                  selected ? "font-bold text-navy" : "font-medium text-muted",
+                ].join(" ")}
+              >
+                {option}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function NotesStep({
+  details,
+  onNotesChange,
+  onMediaChange,
+  onOpenCamera,
+}: {
+  details: PestObservationDetails;
+  onNotesChange: (value: string) => void;
+  onMediaChange: (media: ObservationMediaItem[]) => void;
+  onOpenCamera: () => void;
+}) {
+  return (
+    <section className="space-y-6 pt-2">
+      <div>
+        <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#e87722]">
+          Photos
+        </p>
+        <h2 className="mb-4 text-lg font-bold text-navy">Add supporting images</h2>
+        <ObservationMediaSection
+          media={details.media}
+          onMediaChange={onMediaChange}
+          onOpenCamera={onOpenCamera}
+        />
+      </div>
+
+      <div>
+        <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#e87722]">
+          Notes
+        </p>
+        <h2 className="mb-4 text-lg font-bold text-navy">Anything else to add?</h2>
+        <textarea
+          value={details.otherNotes}
+          onChange={(e) => onNotesChange(e.target.value)}
+          rows={4}
+          placeholder="Add any additional observations…"
+          className="w-full resize-none rounded-xl border border-border bg-surface px-4 py-3 text-sm text-navy outline-none transition-all placeholder:text-muted/60 focus:border-teal focus:ring-2 focus:ring-teal/20"
+        />
       </div>
     </section>
   );

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { PrototypeWorkspace } from "@/components/PrototypeWorkspace";
 import "./globals.css";
 
 const inter = Inter({
@@ -28,7 +29,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#1a2744",
+  themeColor: "#1a3340",
   viewportFit: "cover",
 };
 
@@ -39,7 +40,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} min-h-dvh`}>{children}</body>
+      <body className={`${inter.variable} min-h-dvh`}>
+        <PrototypeWorkspace>{children}</PrototypeWorkspace>
+      </body>
     </html>
   );
 }

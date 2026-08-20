@@ -1,5 +1,6 @@
-import { ScoutingInstancesView } from "@/components/ScoutingInstancesView";
+import { redirect } from "next/navigation";
+import { getDefaultScoutingRoute } from "@/lib/scouting-tasks";
 
 export default function DashboardPage() {
-  return <ScoutingInstancesView />;
+  redirect(getDefaultScoutingRoute());
 }

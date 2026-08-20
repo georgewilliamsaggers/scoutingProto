@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useScopeBriefOptional } from "@/components/ScopeBriefContext";
 import { CameraCaptureView } from "@/components/CameraCaptureView";
 import { PestDetailPage } from "@/components/PestDetailPage";
 import { PestSymptomMatchPage } from "@/components/PestSymptomMatchPage";
@@ -33,6 +34,7 @@ export function PestObservationFlow({
   const [details, setDetails] = useState<PestObservationDetails>(EMPTY_PEST_DETAILS);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraPurpose, setCameraPurpose] = useState<CameraPurpose>("other");
+  const scopeBrief = useScopeBriefOptional();
 
   useEffect(() => {
     if (open) {
@@ -42,6 +44,14 @@ export function PestObservationFlow({
       setCameraPurpose("other");
     }
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !scopeBrief) return;
+
+    scopeBrief.setActiveSectionId(
+      step === "symptom_match" ? "pest-selection" : "pest-detail"
+    );
+  }, [open, scopeBrief, step]);
 
   if (!open) return null;
 
@@ -135,6 +145,7 @@ export function PestObservationFlow({
         />
       ) : (
         <PestDetailPage
+          key={`${details.pestCategoryId}-${details.pestImageSrc}`}
           commodity={commodity}
           details={details}
           onChange={setDetails}

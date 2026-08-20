@@ -101,6 +101,12 @@ export const scoutingTasks: ScoutingTask[] = [
   },
 ];
 
+export const DEFAULT_SCOUTING_TASK_ID = "task-scout-cp1";
+
+export function getDefaultScoutingRoute(): string {
+  return "/scouting";
+}
+
 export function getScoutingTaskById(id: string): ScoutingTask | undefined {
   return scoutingTasks.find((task) => task.id === id);
 }

@@ -2,17 +2,23 @@
 
 import Image from "next/image";
 import { useRef, useState } from "react";
-import { HoldToRecordVoiceNote } from "@/components/HoldToRecordVoiceNote";
 import {
   formatMediaUploadTime,
   getWeedDisplayName,
   getWeedSpecificType,
   getWeedSpecificTypesForCategory,
   ObservationMediaItem,
-  WEED_DENSITY_OPTIONS,
-  WEED_SIZE_OPTIONS,
+  WEED_AMOUNT_LABELS,
+  WEED_GROWTH_STAGE_LABELS,
   WeedObservationDetails,
 } from "@/lib/observations";
+
+type DetailStep = "type" | "scales" | "photos";
+
+const DETAIL_STEPS: DetailStep[] = ["type", "scales", "photos"];
+
+const WEED_ACCENT = "#2d6a4f";
+const WEED_TRACK = "#d1e7dd";
 
 interface WeedDetailPageProps {
   commodity: string;
@@ -31,19 +37,18 @@ export function WeedDetailPage({
   onOpenCamera,
   onSave,
 }: WeedDetailPageProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [scrollTop, setScrollTop] = useState(0);
-  const canSave = Boolean(details.weedCategoryId);
+  const [step, setStep] = useState<DetailStep>("type");
+  const stepIndex = DETAIL_STEPS.indexOf(step);
 
-  const collapseDistance = 96;
-  const collapse = Math.min(scrollTop / collapseDistance, 1);
-  const imageSize = 64 - collapse * 36;
-  const flagSize = 40 - collapse * 8;
-  const titleSize = 20 - collapse * 4;
-  const backSpacing = 16 - collapse * 12;
-  const headerSpacing = 24 - collapse * 24;
-  const showMeta = collapse < 0.45;
-  const showSpecificSubtitle = collapse < 0.3;
+  const specificTypes = getWeedSpecificTypesForCategory(details.weedCategoryId);
+  const isOtherFlow = details.weedCategoryId === "other";
+  const selectedSpecificType = details.weedSpecificTypeId
+    ? getWeedSpecificType(details.weedSpecificTypeId)
+    : undefined;
+  const headerTitle =
+    isOtherFlow || !details.weedCategoryLabel
+      ? getWeedDisplayName(details)
+      : details.weedCategoryLabel;
 
   function updateField<K extends keyof WeedObservationDetails>(
     key: K,
@@ -76,351 +81,332 @@ export function WeedDetailPage({
     });
   }
 
-  const specificTypes = getWeedSpecificTypesForCategory(details.weedCategoryId);
-  const isOtherFlow = details.weedCategoryId === "other";
-  const selectedSpecificType = details.weedSpecificTypeId
-    ? getWeedSpecificType(details.weedSpecificTypeId)
-    : undefined;
-  const headerTitle = getWeedDisplayName(details);
+  function goBack() {
+    if (stepIndex === 0) {
+      onBack();
+      return;
+    }
+    setStep(DETAIL_STEPS[stepIndex - 1]);
+  }
+
+  function goNext() {
+    if (stepIndex >= DETAIL_STEPS.length - 1) return;
+    setStep(DETAIL_STEPS[stepIndex + 1]);
+  }
+
+  function goToStep(targetIndex: number) {
+    if (targetIndex < 0 || targetIndex >= DETAIL_STEPS.length) return;
+    if (targetIndex > stepIndex) return;
+    setStep(DETAIL_STEPS[targetIndex]);
+  }
+
+  const canProceed = step === "type" || step === "scales";
 
   return (
     <div className="absolute inset-0 z-50 flex flex-col bg-surface-elevated">
-      <div
-        className={[
-          "shrink-0 px-5 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[border-color,padding]",
-          collapse > 0.05 ? "border-b border-border/60" : "border-b border-transparent",
-        ].join(" ")}
-        style={{ paddingBottom: `${8 + (1 - collapse) * 8}px` }}
-      >
-        <div style={{ marginBottom: `${backSpacing}px` }}>
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex items-center gap-1 text-sm font-semibold text-navy transition-colors active:text-teal"
-          >
-            <ChevronLeftIcon />
-            Back
-          </button>
-        </div>
+      <WeedDetailHeader
+        commodity={commodity}
+        details={details}
+        headerTitle={headerTitle}
+        selectedSpecificTypeLabel={selectedSpecificType?.label}
+        isOtherFlow={isOtherFlow}
+        onBack={goBack}
+        onToggleFlag={() =>
+          updateField("flaggedForFollowUp", !details.flaggedForFollowUp)
+        }
+      />
 
-        <div
-          className="flex items-center gap-3"
-          style={{ marginBottom: `${headerSpacing}px` }}
-        >
-          <div
-            className="relative shrink-0 overflow-hidden rounded-xl border border-border/60 bg-surface transition-[width,height,border-radius]"
-            style={{
-              width: `${imageSize}px`,
-              height: `${imageSize}px`,
-              borderRadius: `${12 - collapse * 4}px`,
-            }}
-          >
-            {details.weedImageSrc ? (
-              details.weedImageSrc.startsWith("blob:") ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={details.weedImageSrc}
-                  alt={headerTitle}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <Image
-                  src={details.weedImageSrc}
-                  alt={headerTitle}
-                  fill
-                  unoptimized={details.weedImageSrc.endsWith(".svg")}
-                  className="object-cover"
-                  sizes="64px"
-                />
-              )
-            ) : null}
-          </div>
+      <StepProgress
+        currentStep={stepIndex + 1}
+        totalSteps={DETAIL_STEPS.length}
+        onStepSelect={(stepNumber) => goToStep(stepNumber - 1)}
+      />
 
-          <div className="min-w-0 flex-1">
-            {showMeta && (
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-                {commodity} weed
-              </p>
-            )}
-            <p
-              className="truncate font-bold leading-tight text-navy"
-              style={{ fontSize: `${titleSize}px` }}
-            >
-              {headerTitle}
-            </p>
-            {!isOtherFlow && selectedSpecificType && showSpecificSubtitle && (
-              <p className="truncate text-sm font-semibold text-teal">
-                {selectedSpecificType.label}
-              </p>
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={() =>
-              updateField("flaggedForFollowUp", !details.flaggedForFollowUp)
-            }
-            aria-label={
-              details.flaggedForFollowUp
-                ? "Remove follow up flag"
-                : "Flag for follow up"
-            }
-            aria-pressed={details.flaggedForFollowUp}
-            className={[
-              "flex shrink-0 items-center justify-center rounded-full transition-colors",
-              details.flaggedForFollowUp
-                ? "bg-amber-100 text-amber-700"
-                : "text-muted hover:bg-surface hover:text-navy",
-            ].join(" ")}
-            style={{ width: `${flagSize}px`, height: `${flagSize}px` }}
-          >
-            <FlagIcon filled={details.flaggedForFollowUp} />
-          </button>
-        </div>
-      </div>
-
-      <div
-        ref={scrollRef}
-        onScroll={() => setScrollTop(scrollRef.current?.scrollTop ?? 0)}
-        className="flex-1 overflow-y-auto px-5 pb-4"
-      >
-        {isOtherFlow ? (
-          <section className="mb-8">
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-              Weed name
-            </p>
-            <h2 className="mb-1 text-lg font-bold text-navy">What did you find?</h2>
-            <p className="mb-4 text-sm text-muted">
-              Optional — leave blank if you are not sure
-            </p>
-            <input
-              type="text"
-              value={details.weedOther}
-              onChange={(e) => {
-                const value = e.target.value;
-                onChange({
-                  ...details,
-                  weedOther: value,
-                  weedLabel: value.trim() || "Weed",
-                });
-              }}
-              placeholder="Enter weed name…"
-              className="h-11 w-full rounded-xl border border-border bg-surface px-4 text-sm text-navy outline-none transition-all placeholder:text-muted/60 focus:border-lime focus:ring-2 focus:ring-lime/20"
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div key={step} className="step-enter min-h-0 flex-1 overflow-y-auto px-5 pb-4">
+          {step === "type" && (
+            <TypeStep
+              details={details}
+              isOtherFlow={isOtherFlow}
+              specificTypes={specificTypes}
+              onChange={onChange}
+              onToggleSpecificType={toggleSpecificType}
             />
-          </section>
-        ) : (
-          specificTypes.length > 0 && (
-            <section className="mb-8">
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-                Specific type
-              </p>
-              <h2 className="mb-1 text-lg font-bold text-navy">
-                Which {details.weedCategoryLabel.toLowerCase()} is it?
-              </h2>
-              <p className="mb-4 text-sm text-muted">Optional — select if you can identify it</p>
+          )}
 
-              <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {specificTypes.map((type) => {
-                  const selected = details.weedSpecificTypeId === type.id;
+          {step === "scales" && (
+            <ScalesStep
+              growthStage={details.sizeScale}
+              amount={details.densityScale}
+              onGrowthStageChange={(value) => updateField("sizeScale", value)}
+              onAmountChange={(value) => updateField("densityScale", value)}
+            />
+          )}
 
-                  return (
-                    <button
-                      key={type.id}
-                      type="button"
-                      onClick={() => toggleSpecificType(type.id)}
-                      aria-pressed={selected}
-                      className={[
-                        "w-[9.5rem] shrink-0 overflow-hidden rounded-2xl border text-left transition-all active:scale-[0.98]",
-                        selected
-                          ? "border-lime bg-lime/5 ring-2 ring-lime/30"
-                          : "border-border/80 bg-surface-elevated",
-                      ].join(" ")}
-                    >
-                      <div className="relative aspect-[4/3] w-full bg-surface">
-                        <Image
-                          src={type.imageSrc}
-                          alt={type.label}
-                          fill
-                          unoptimized
-                          className="object-cover"
-                          sizes="152px"
-                        />
-                      </div>
-                      <div className="px-2.5 py-2">
-                        <p className="text-xs font-bold leading-tight text-navy">{type.label}</p>
-                        <p className="mt-1 line-clamp-3 text-[10px] leading-snug text-muted">
-                          {type.description}
-                        </p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-          )
-        )}
-
-        <WeedScaleSection
-          title="Size"
-          question="How developed is it?"
-          value={details.sizeScale}
-          options={WEED_SIZE_OPTIONS}
-          variant="size"
-          onChange={(value) => updateField("sizeScale", value)}
-        />
-
-        <WeedScaleSection
-          title="Density"
-          question="How many are here?"
-          value={details.densityScale}
-          options={WEED_DENSITY_OPTIONS}
-          variant="density"
-          onChange={(value) => updateField("densityScale", value)}
-        />
-
-        <section className="mb-8">
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-            Photos
-          </p>
-          <h2 className="mb-4 text-lg font-bold text-navy">Add supporting images</h2>
-          <ObservationMediaSection
-            media={details.media}
-            onMediaChange={(media) => updateField("media", media)}
-            onOpenCamera={onOpenCamera}
-          />
-        </section>
-
-        <section className="mb-4">
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-            Notes
-          </p>
-          <h2 className="mb-4 text-lg font-bold text-navy">Anything else to add?</h2>
-          <textarea
-            value={details.otherNotes}
-            onChange={(e) => updateField("otherNotes", e.target.value)}
-            rows={4}
-            placeholder="Add any additional observations…"
-            className="w-full resize-none rounded-xl border border-border bg-surface px-4 py-3 text-sm text-navy outline-none transition-all placeholder:text-muted/60 focus:border-lime focus:ring-2 focus:ring-lime/20"
-          />
-          <HoldToRecordVoiceNote
-            value={details.voiceNote}
-            onChange={(voiceNote) => updateField("voiceNote", voiceNote)}
-          />
-        </section>
+          {step === "photos" && (
+            <PhotosStep
+              otherNotes={details.otherNotes}
+              media={details.media}
+              onNotesChange={(value) => updateField("otherNotes", value)}
+              onMediaChange={(media) => updateField("media", media)}
+              onOpenCamera={onOpenCamera}
+            />
+          )}
+        </div>
       </div>
 
       <div className="shrink-0 border-t border-border/60 px-5 py-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+        {step === "photos" ? (
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={!details.weedCategoryId}
+            className="btn-primary-block disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+          >
+            Confirm observation
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={goNext}
+            disabled={!canProceed}
+            className="btn-primary-block disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+          >
+            Continue
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function WeedDetailHeader({
+  commodity,
+  details,
+  headerTitle,
+  selectedSpecificTypeLabel,
+  isOtherFlow,
+  onBack,
+  onToggleFlag,
+}: {
+  commodity: string;
+  details: WeedObservationDetails;
+  headerTitle: string;
+  selectedSpecificTypeLabel?: string;
+  isOtherFlow: boolean;
+  onBack: () => void;
+  onToggleFlag: () => void;
+}) {
+  return (
+    <div className="shrink-0 border-b border-border/60 px-5 pb-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
+      <div className="mb-4">
         <button
           type="button"
-          onClick={onSave}
-          disabled={!canSave}
-          className="gradient-brand flex h-12 w-full items-center justify-center rounded-xl text-base font-semibold text-white shadow-lg shadow-lime/25 transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+          onClick={onBack}
+          className="flex items-center gap-1 text-sm font-semibold text-navy transition-colors active:text-teal"
         >
-          Save observation
+          <ChevronLeftIcon />
+          Back
+        </button>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-border/60 bg-surface">
+          {details.weedImageSrc ? (
+            details.weedImageSrc.startsWith("blob:") ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={details.weedImageSrc}
+                alt={headerTitle}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <Image
+                src={details.weedImageSrc}
+                alt={headerTitle}
+                fill
+                unoptimized={details.weedImageSrc.endsWith(".svg")}
+                className="object-cover"
+                sizes="64px"
+              />
+            )
+          ) : null}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+            {commodity} weed
+          </p>
+          <p className="truncate text-xl font-bold leading-tight text-navy">
+            {headerTitle}
+          </p>
+          {!isOtherFlow && selectedSpecificTypeLabel && (
+            <p className="truncate text-sm font-semibold text-teal">
+              {selectedSpecificTypeLabel}
+            </p>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={onToggleFlag}
+          aria-label={
+            details.flaggedForFollowUp
+              ? "Remove follow up flag"
+              : "Flag for follow up"
+          }
+          aria-pressed={details.flaggedForFollowUp}
+          className={[
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors",
+            details.flaggedForFollowUp
+              ? "bg-amber-100 text-amber-700"
+              : "text-muted hover:bg-surface hover:text-navy",
+          ].join(" ")}
+        >
+          <FlagIcon filled={details.flaggedForFollowUp} />
         </button>
       </div>
     </div>
   );
 }
 
-type ScaleOption = { label: string; subtitle: string };
-
-function WeedScaleSection({
-  title,
-  question,
-  value,
-  options,
-  variant,
-  onChange,
+function StepProgress({
+  currentStep,
+  totalSteps,
+  onStepSelect,
 }: {
-  title: string;
-  question: string;
-  value: number;
-  options: readonly ScaleOption[];
-  variant: "size" | "density";
-  onChange: (value: number) => void;
+  currentStep: number;
+  totalSteps: number;
+  onStepSelect: (step: number) => void;
 }) {
-  const clampedValue = Math.min(5, Math.max(1, value));
-  const selected = options[clampedValue - 1] ?? options[2];
-  const fillPercent = ((clampedValue - 1) / 4) * 100;
-
   return (
-    <section className="mb-8">
-      <div className="mb-3 flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-            {title}
-          </p>
-          <h2 className="mt-1 text-lg font-bold text-navy">{question}</h2>
-        </div>
-        <span className="text-3xl font-bold tabular-nums text-lime">{clampedValue}</span>
-      </div>
-
-      <div className="mb-4 flex items-center gap-3 rounded-2xl border border-border/60 bg-[#f3f6f0] px-4 py-3.5">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-lime/20 text-lime">
-          {variant === "size" ? (
-            <SizeIcon level={clampedValue} />
-          ) : (
-            <DensityIcon level={clampedValue} />
-          )}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-base font-bold text-navy">{selected.label}</p>
-          <p className="text-sm text-muted">{selected.subtitle}</p>
-        </div>
-      </div>
-
-      <div className="relative px-1 py-4">
-        <div className="pointer-events-none relative h-3 rounded-full bg-lime/20">
-          <div
-            className="absolute inset-y-0 left-0 rounded-full bg-lime"
-            style={{ width: `${fillPercent}%` }}
-          />
-        </div>
-        <input
-          type="range"
-          min={1}
-          max={5}
-          step={1}
-          value={clampedValue}
-          onChange={(e) => onChange(Number(e.target.value))}
-          className="weed-scale-slider absolute inset-x-0 top-1/2 h-10 w-full -translate-y-1/2 cursor-pointer appearance-none bg-transparent"
-          aria-label={question}
-          aria-valuetext={`${selected.label}: ${selected.subtitle}`}
-        />
-      </div>
-
-      <div className="mt-1 flex justify-between gap-1">
-        {options.map((option, index) => {
-          const optionValue = index + 1;
-          const isSelected = clampedValue === optionValue;
+    <div className="shrink-0 border-b border-border/40 bg-surface px-5 py-3">
+      <div className="flex gap-1.5">
+        {Array.from({ length: totalSteps }, (_, index) => {
+          const stepNumber = index + 1;
+          const isReached = stepNumber <= currentStep;
 
           return (
             <button
-              key={option.label}
+              key={index}
               type="button"
-              onClick={() => onChange(optionValue)}
-              aria-pressed={isSelected}
+              onClick={() => isReached && onStepSelect(stepNumber)}
+              disabled={!isReached}
+              aria-label={`Go to step ${stepNumber}`}
+              aria-current={stepNumber === currentStep ? "step" : undefined}
               className={[
-                "flex flex-1 flex-col items-center gap-1.5 rounded-xl px-1 py-2 transition-all",
-                isSelected ? "bg-lime/15 ring-1 ring-lime/25" : "bg-transparent",
+                "h-1 flex-1 rounded-full transition-colors duration-300",
+                isReached ? "bg-teal" : "bg-border",
+                isReached ? "cursor-pointer hover:bg-teal-deep/80" : "cursor-default",
+              ].join(" ")}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function TypeStep({
+  details,
+  isOtherFlow,
+  specificTypes,
+  onChange,
+  onToggleSpecificType,
+}: {
+  details: WeedObservationDetails;
+  isOtherFlow: boolean;
+  specificTypes: ReturnType<typeof getWeedSpecificTypesForCategory>;
+  onChange: (details: WeedObservationDetails) => void;
+  onToggleSpecificType: (typeId: string) => void;
+}) {
+  if (isOtherFlow) {
+    return (
+      <section className="pt-2">
+        <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-lime">
+          Weed name
+        </p>
+        <h2 className="mb-1 text-lg font-bold text-navy">What did you find?</h2>
+        <p className="mb-4 text-sm text-muted">
+          Optional — leave blank if you are not sure
+        </p>
+        <input
+          type="text"
+          value={details.weedOther}
+          onChange={(e) => {
+            const value = e.target.value;
+            onChange({
+              ...details,
+              weedOther: value,
+              weedLabel: value.trim() || "Weed",
+            });
+          }}
+          placeholder="Enter weed name…"
+          className="h-11 w-full rounded-xl border border-border bg-surface px-4 text-sm text-navy outline-none transition-all placeholder:text-muted/60 focus:border-lime focus:ring-2 focus:ring-lime/20"
+        />
+      </section>
+    );
+  }
+
+  if (specificTypes.length === 0) {
+    return (
+      <section className="pt-2">
+        <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-lime">
+          Weed type
+        </p>
+        <h2 className="mb-2 text-lg font-bold text-navy">{details.weedCategoryLabel}</h2>
+        <p className="text-sm text-muted">
+          No sub-types for this category. Tap Continue to proceed.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="pt-2">
+      <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-lime">
+        Specific weed
+      </p>
+      <h2 className="mb-1 text-lg font-bold text-navy">
+        Which {details.weedCategoryLabel.toLowerCase()} is it?
+      </h2>
+      <p className="mb-4 text-sm text-muted">
+        Optional — select if you can identify it
+      </p>
+
+      <div className="space-y-2.5">
+        {specificTypes.map((type) => {
+          const selected = details.weedSpecificTypeId === type.id;
+
+          return (
+            <button
+              key={type.id}
+              type="button"
+              onClick={() => onToggleSpecificType(type.id)}
+              aria-pressed={selected}
+              className={[
+                "flex w-full items-center gap-3 overflow-hidden rounded-2xl border p-3 text-left transition-all active:scale-[0.98]",
+                selected
+                  ? "border-lime bg-lime/5 ring-2 ring-lime/20"
+                  : "border-border/80 bg-surface-elevated shadow-sm",
               ].join(" ")}
             >
-              <span className={isSelected ? "text-lime" : "text-muted/50"}>
-                {variant === "size" ? (
-                  <SizeIcon level={optionValue} small />
-                ) : (
-                  <DensityIcon level={optionValue} small />
-                )}
-              </span>
-              <span
-                className={[
-                  "text-center text-[10px] font-semibold leading-tight",
-                  isSelected ? "text-lime" : "text-muted",
-                ].join(" ")}
-              >
-                {option.label}
-              </span>
+              <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-surface">
+                <Image
+                  src={type.imageSrc}
+                  alt={type.label}
+                  fill
+                  unoptimized
+                  className="object-cover"
+                  sizes="64px"
+                />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-navy">{type.label}</p>
+                <p className="mt-0.5 line-clamp-2 text-xs text-muted">
+                  {type.description}
+                </p>
+              </div>
             </button>
           );
         })}
@@ -429,74 +415,310 @@ function WeedScaleSection({
   );
 }
 
-function SizeIcon({ level, small }: { level: number; small?: boolean }) {
-  const size = small ? 20 : 24;
+function ScalesStep({
+  growthStage,
+  amount,
+  onGrowthStageChange,
+  onAmountChange,
+}: {
+  growthStage: number;
+  amount: number;
+  onGrowthStageChange: (value: number) => void;
+  onAmountChange: (value: number) => void;
+}) {
+  return (
+    <section className="space-y-4 pt-2">
+      <WeedGrowthStageCard value={growthStage} onChange={onGrowthStageChange} />
+      <WeedAmountCard value={amount} onChange={onAmountChange} />
+    </section>
+  );
+}
+
+function WeedGrowthStageCard({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  const options = WEED_GROWTH_STAGE_LABELS;
+  const clampedValue = Math.min(options.length, Math.max(1, value));
+  const selectedLabel = options[clampedValue - 1];
+  const fillPercent = ((clampedValue - 1) / (options.length - 1)) * 100;
+
+  return (
+    <div className="rounded-2xl border border-border/80 bg-surface-elevated p-4 shadow-sm">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div>
+          <p
+            className="text-[11px] font-semibold uppercase tracking-[0.12em]"
+            style={{ color: WEED_ACCENT }}
+          >
+            Weed growth stage
+          </p>
+          <h3 className="mt-1 text-base font-bold text-navy">
+            What stage is the weed?
+          </h3>
+        </div>
+        <span
+          className="shrink-0 rounded-full px-3 py-1 text-xs font-bold"
+          style={{ backgroundColor: `${WEED_ACCENT}18`, color: WEED_ACCENT }}
+        >
+          {selectedLabel}
+        </span>
+      </div>
+
+      <GrowthCurve selectedStage={clampedValue} totalStages={options.length} />
+
+      <div className="relative mt-2 px-0.5">
+        <div
+          className="relative h-2 rounded-full"
+          style={{ backgroundColor: WEED_TRACK }}
+        >
+          <div
+            className="absolute inset-y-0 left-0 rounded-full transition-all duration-200"
+            style={{ width: `${fillPercent}%`, backgroundColor: WEED_ACCENT }}
+          />
+        </div>
+        <input
+          type="range"
+          min={1}
+          max={options.length}
+          step={1}
+          value={clampedValue}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className="disease-scale-slider absolute inset-0 h-2 w-full cursor-pointer appearance-none bg-transparent"
+          aria-label="What stage is the weed?"
+        />
+      </div>
+
+      <div className="mt-3 flex justify-between gap-0.5">
+        {options.map((option, index) => {
+          const optionValue = index + 1;
+          const selected = clampedValue === optionValue;
+
+          return (
+            <div key={option} className="flex min-w-0 flex-1 flex-col items-center gap-1">
+              <span
+                className={[
+                  "h-1.5 w-1.5 rounded-full transition-colors",
+                  selected ? "opacity-100" : "opacity-0",
+                ].join(" ")}
+                style={{ backgroundColor: selected ? WEED_ACCENT : "transparent" }}
+              />
+              <span
+                className={[
+                  "text-center text-[9px] leading-tight",
+                  selected ? "font-bold text-navy" : "font-medium text-muted",
+                ].join(" ")}
+              >
+                {option}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <p className="mt-3 text-xs leading-relaxed text-muted">
+        Leaf stages are close together. The curve rises sharply for larger weeds that
+        may respond differently to spraying.
+      </p>
+    </div>
+  );
+}
+
+function GrowthCurve({
+  selectedStage,
+  totalStages,
+}: {
+  selectedStage: number;
+  totalStages: number;
+}) {
+  const width = 320;
+  const height = 72;
+  const paddingX = 12;
+  const paddingY = 8;
+
+  const points = Array.from({ length: totalStages }, (_, index) => {
+    const t = index / (totalStages - 1);
+    const x = paddingX + t * (width - paddingX * 2);
+    const y = height - paddingY - Math.pow(t, 2.2) * (height - paddingY * 2);
+    return { x, y, index: index + 1 };
+  });
+
+  const pathD = points
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
+    .join(" ");
 
   return (
     <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
+      viewBox={`0 0 ${width} ${height}`}
+      className="mb-1 w-full"
       aria-hidden="true"
     >
       <path
-        d="M12 22V12"
-        stroke="currentColor"
-        strokeWidth="2"
+        d={pathD}
+        fill="none"
+        stroke={WEED_TRACK}
+        strokeWidth="3"
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
-      {level >= 1 && (
-        <circle cx="12" cy="10" r="1.5" fill="currentColor" opacity="0.6" />
-      )}
-      {level >= 2 && (
-        <>
-          <path d="M12 12C10 10 8 8 7 6c2 1 3.5 3 5 5" fill="currentColor" opacity="0.7" />
-          <path d="M12 12c2-2 4-4 5-6-2 1-3.5 3-5 5" fill="currentColor" opacity="0.7" />
-        </>
-      )}
-      {level >= 3 && (
-        <>
-          <path d="M12 12C9 9 6 7 4 4c3 1.5 5.5 4 8 7" fill="currentColor" opacity="0.85" />
-          <path d="M12 12c3-3 6-5 8-8-3 1.5-5.5 4-8 7" fill="currentColor" opacity="0.85" />
-        </>
-      )}
-      {level >= 4 && (
-        <>
-          <path d="M12 12C8 8 4 5 2 2c4 2 7 5.5 10 9" fill="currentColor" />
-          <path d="M12 12c4-4 8-7 10-10-4 2-7 5.5-10 9" fill="currentColor" />
-        </>
-      )}
-      {level >= 5 && (
-        <circle cx="12" cy="5" r="2.5" fill="currentColor" opacity="0.7" />
-      )}
+      {points.map((point) => {
+        const isSelected = point.index === selectedStage;
+        const radius = isSelected ? 7 : 5;
+
+        return (
+          <g key={point.index}>
+            {isSelected && (
+              <circle cx={point.x} cy={point.y} r={radius + 3} fill={`${WEED_ACCENT}30`} />
+            )}
+            <circle
+              cx={point.x}
+              cy={point.y}
+              r={radius}
+              fill={isSelected ? WEED_ACCENT : "#fff"}
+              stroke={WEED_ACCENT}
+              strokeWidth={isSelected ? 0 : 2}
+            />
+          </g>
+        );
+      })}
     </svg>
   );
 }
 
-function DensityIcon({ level, small }: { level: number; small?: boolean }) {
-  const size = small ? 20 : 24;
-  const dotCount = level;
-  const spacing = size / (dotCount + 1);
+function WeedAmountCard({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  const options = WEED_AMOUNT_LABELS;
+  const clampedValue = Math.min(options.length, Math.max(1, value));
+  const fillPercent = ((clampedValue - 1) / (options.length - 1)) * 100;
 
   return (
-    <svg
-      width={size}
-      height={size / 2}
-      viewBox={`0 0 ${size} ${size / 2}`}
-      fill="none"
-      aria-hidden="true"
-    >
-      {Array.from({ length: dotCount }, (_, i) => (
-        <circle
-          key={i}
-          cx={spacing * (i + 1)}
-          cy={size / 4}
-          r={small ? 2 : 2.5}
-          fill="currentColor"
+    <div className="rounded-2xl border border-border/80 bg-surface-elevated p-4 shadow-sm">
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div>
+          <p
+            className="text-[11px] font-semibold uppercase tracking-[0.12em]"
+            style={{ color: WEED_ACCENT }}
+          >
+            Amount
+          </p>
+          <h3 className="mt-1 text-base font-bold text-navy">How much is present?</h3>
+        </div>
+        <span
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold tabular-nums"
+          style={{ backgroundColor: `${WEED_ACCENT}18`, color: WEED_ACCENT }}
+        >
+          {clampedValue}
+        </span>
+      </div>
+
+      <div className="relative px-0.5">
+        <div
+          className="relative h-2 rounded-full"
+          style={{ backgroundColor: WEED_TRACK }}
+        >
+          <div
+            className="absolute inset-y-0 left-0 rounded-full transition-all duration-200"
+            style={{ width: `${fillPercent}%`, backgroundColor: WEED_ACCENT }}
+          />
+        </div>
+        <input
+          type="range"
+          min={1}
+          max={options.length}
+          step={1}
+          value={clampedValue}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className="disease-scale-slider absolute inset-0 h-2 w-full cursor-pointer appearance-none bg-transparent"
+          aria-label="How much is present?"
         />
-      ))}
-    </svg>
+      </div>
+
+      <div className="mt-3 flex justify-between gap-1">
+        {options.map((option, index) => {
+          const optionValue = index + 1;
+          const selected = clampedValue === optionValue;
+
+          return (
+            <div key={option} className="flex min-w-0 flex-1 flex-col items-center gap-1">
+              <span
+                className={[
+                  "flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors",
+                  selected ? "border-lime bg-lime/10" : "border-transparent",
+                ].join(" ")}
+              >
+                <span
+                  className={[
+                    "h-1.5 w-1.5 rounded-full transition-colors",
+                    selected ? "opacity-100" : "opacity-0",
+                  ].join(" ")}
+                  style={{ backgroundColor: selected ? WEED_ACCENT : "transparent" }}
+                />
+              </span>
+              <span
+                className={[
+                  "text-center text-[10px] leading-tight",
+                  selected ? "font-bold text-navy" : "font-medium text-muted",
+                ].join(" ")}
+              >
+                {option}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function PhotosStep({
+  otherNotes,
+  media,
+  onNotesChange,
+  onMediaChange,
+  onOpenCamera,
+}: {
+  otherNotes: string;
+  media: ObservationMediaItem[];
+  onNotesChange: (value: string) => void;
+  onMediaChange: (media: ObservationMediaItem[]) => void;
+  onOpenCamera: () => void;
+}) {
+  return (
+    <section className="space-y-6 pt-2">
+      <div>
+        <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-lime">
+          Photos
+        </p>
+        <h2 className="mb-4 text-lg font-bold text-navy">Add supporting images</h2>
+        <ObservationMediaSection
+          media={media}
+          onMediaChange={onMediaChange}
+          onOpenCamera={onOpenCamera}
+        />
+      </div>
+
+      <div>
+        <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-lime">
+          Comments
+        </p>
+        <h2 className="mb-4 text-lg font-bold text-navy">Anything else to add?</h2>
+        <textarea
+          value={otherNotes}
+          onChange={(e) => onNotesChange(e.target.value)}
+          rows={4}
+          placeholder="Add any additional observations…"
+          className="w-full resize-none rounded-xl border border-border bg-surface px-4 py-3 text-sm text-navy outline-none transition-all placeholder:text-muted/60 focus:border-lime focus:ring-2 focus:ring-lime/20"
+        />
+      </div>
+    </section>
   );
 }
 

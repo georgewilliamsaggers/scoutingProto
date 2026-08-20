@@ -137,7 +137,7 @@ export function VoiceNoteOverlay({ open, onClose, onSubmit }: VoiceNoteOverlayPr
             className={[
               "relative mb-6 flex h-28 w-28 items-center justify-center rounded-full transition-all active:scale-95",
               isPaused
-                ? "gradient-brand shadow-lg shadow-lime/25"
+                ? "gradient-brand shadow-lg shadow-teal/25"
                 : "bg-red-500 shadow-lg shadow-red-500/30",
             ].join(" ")}
             aria-label={isPaused ? "Resume recording" : "Pause recording"}
@@ -237,7 +237,7 @@ export function VoiceNoteOverlay({ open, onClose, onSubmit }: VoiceNoteOverlayPr
           <button
             type="button"
             onClick={handleSubmit}
-            className="gradient-brand flex h-12 w-full items-center justify-center rounded-xl text-base font-semibold text-white shadow-lg shadow-lime/25 transition-all active:scale-[0.98]"
+            className="btn-primary-block"
           >
             Submit recording
           </button>

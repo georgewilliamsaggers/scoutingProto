@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useScopeBriefOptional } from "@/components/ScopeBriefContext";
 import { CameraCaptureView } from "@/components/CameraCaptureView";
 import { WeedDetailPage } from "@/components/WeedDetailPage";
 import { WeedSymptomMatchPage } from "@/components/WeedSymptomMatchPage";
@@ -32,6 +33,7 @@ export function WeedObservationFlow({
   const [details, setDetails] = useState<WeedObservationDetails>(EMPTY_WEED_DETAILS);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraPurpose, setCameraPurpose] = useState<CameraPurpose>("other");
+  const scopeBrief = useScopeBriefOptional();
 
   useEffect(() => {
     if (open) {
@@ -41,6 +43,14 @@ export function WeedObservationFlow({
       setCameraPurpose("other");
     }
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !scopeBrief) return;
+
+    scopeBrief.setActiveSectionId(
+      step === "category_match" ? "weed-selection" : "weed-detail"
+    );
+  }, [open, scopeBrief, step]);
 
   if (!open) return null;
 
@@ -129,6 +139,7 @@ export function WeedObservationFlow({
         />
       ) : (
         <WeedDetailPage
+          key={`${details.weedCategoryId}-${details.weedImageSrc}`}
           commodity={commodity}
           details={details}
           onChange={setDetails}
