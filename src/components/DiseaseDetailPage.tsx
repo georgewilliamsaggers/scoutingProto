@@ -2,19 +2,19 @@
 
 import Image from "next/image";
 import { useRef, useState } from "react";
-import { HoldToRecordVoiceNote } from "@/components/HoldToRecordVoiceNote";
 import {
   DiseaseObservationDetails,
-  FIELD_PREVALENCE_LABELS,
+  DISEASE_SEVERITY_LABELS,
+  DISEASE_SPREAD_LABELS,
   formatMediaUploadTime,
   getDiseaseDisplayName,
-  getDiseaseSpecificType,
-  getDiseaseSpecificTypesForCategory,
   ObservationMediaItem,
   PLANT_LOCATIONS,
-  PLANTS_AFFECTED_LABELS,
-  SEVERITY_SCALE_LABELS,
 } from "@/lib/observations";
+
+type DetailStep = "plant-location" | "scales" | "notes";
+
+const DETAIL_STEPS: DetailStep[] = ["plant-location", "scales", "notes"];
 
 interface DiseaseDetailPageProps {
   commodity: string;
@@ -33,19 +33,11 @@ export function DiseaseDetailPage({
   onOpenCamera,
   onSave,
 }: DiseaseDetailPageProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [scrollTop, setScrollTop] = useState(0);
-  const canSave = details.plantLocations.length > 0;
+  const [step, setStep] = useState<DetailStep>("plant-location");
+  const stepIndex = DETAIL_STEPS.indexOf(step);
 
-  const collapseDistance = 96;
-  const collapse = Math.min(scrollTop / collapseDistance, 1);
-  const imageSize = 64 - collapse * 36;
-  const flagSize = 40 - collapse * 8;
-  const titleSize = 20 - collapse * 4;
-  const backSpacing = 16 - collapse * 12;
-  const headerSpacing = 24 - collapse * 24;
-  const showMeta = collapse < 0.45;
-  const showSpecificSubtitle = collapse < 0.3;
+  const isOtherFlow = details.diseaseCategoryId === "other";
+  const headerTitle = getDiseaseDisplayName(details);
 
   function updateField<K extends keyof DiseaseObservationDetails>(
     key: K,
@@ -64,376 +56,356 @@ export function DiseaseDetailPage({
     );
   }
 
-  function toggleSpecificType(typeId: string) {
-    const specificType = getDiseaseSpecificType(typeId);
-    if (!specificType) return;
-
-    if (details.diseaseSpecificTypeId === typeId) {
-      onChange({
-        ...details,
-        diseaseSpecificTypeId: "",
-        diseaseLabel: details.diseaseCategoryLabel,
-        disease: details.diseaseCategoryLabel,
-        diseaseImageSrc: details.diseaseCategoryImageSrc,
-      });
+  function goBack() {
+    if (stepIndex === 0) {
+      onBack();
       return;
     }
-
-    onChange({
-      ...details,
-      diseaseSpecificTypeId: typeId,
-      diseaseLabel: specificType.label,
-      disease: specificType.diseaseValue,
-      diseaseImageSrc: specificType.imageSrc,
-    });
+    setStep(DETAIL_STEPS[stepIndex - 1]);
   }
 
-  const specificTypes = getDiseaseSpecificTypesForCategory(details.diseaseCategoryId);
-  const isOtherFlow = details.diseaseCategoryId === "other";
-  const selectedSpecificType = details.diseaseSpecificTypeId
-    ? getDiseaseSpecificType(details.diseaseSpecificTypeId)
-    : undefined;
-  const headerTitle = getDiseaseDisplayName(details);
+  function goNext() {
+    if (stepIndex >= DETAIL_STEPS.length - 1) return;
+    setStep(DETAIL_STEPS[stepIndex + 1]);
+  }
+
+  function goToStep(targetIndex: number) {
+    if (targetIndex < 0 || targetIndex >= DETAIL_STEPS.length) return;
+    if (targetIndex > stepIndex) return;
+    setStep(DETAIL_STEPS[targetIndex]);
+  }
+
+  const canProceed =
+    step === "plant-location"
+      ? details.plantLocations.length > 0
+      : step === "scales";
 
   return (
     <div className="absolute inset-0 z-50 flex flex-col bg-surface-elevated">
-      <div
-        className={[
-          "shrink-0 px-5 pt-[max(0.75rem,env(safe-area-inset-top))] transition-[border-color,padding]",
-          collapse > 0.05 ? "border-b border-border/60" : "border-b border-transparent",
-        ].join(" ")}
-        style={{ paddingBottom: `${8 + (1 - collapse) * 8}px` }}
-      >
-        <div style={{ marginBottom: `${backSpacing}px` }}>
-          <button
-            type="button"
-            onClick={onBack}
-            className="flex items-center gap-1 text-sm font-semibold text-navy transition-colors active:text-teal"
-          >
-            <ChevronLeftIcon />
-            Back
-          </button>
-        </div>
+      <DiseaseDetailHeader
+        commodity={commodity}
+        details={details}
+        headerTitle={headerTitle}
+        onBack={goBack}
+        onToggleFlag={() =>
+          updateField("flaggedForFollowUp", !details.flaggedForFollowUp)
+        }
+      />
 
-        <div
-          className="flex items-center gap-3"
-          style={{ marginBottom: `${headerSpacing}px` }}
-        >
-          <div
-            className="relative shrink-0 overflow-hidden rounded-xl border border-border/60 bg-surface transition-[width,height,border-radius]"
-            style={{
-              width: `${imageSize}px`,
-              height: `${imageSize}px`,
-              borderRadius: `${12 - collapse * 4}px`,
-            }}
-          >
-            {details.diseaseImageSrc ? (
-              details.diseaseImageSrc.startsWith("blob:") ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={details.diseaseImageSrc}
-                  alt={headerTitle}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <Image
-                  src={details.diseaseImageSrc}
-                  alt={headerTitle}
-                  fill
-                  className="object-cover"
-                  sizes="64px"
-                />
-              )
-            ) : null}
-          </div>
+      <StepProgress
+        currentStep={stepIndex + 1}
+        totalSteps={DETAIL_STEPS.length}
+        onStepSelect={(stepNumber) => goToStep(stepNumber - 1)}
+      />
 
-          <div className="min-w-0 flex-1">
-            {showMeta && (
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-                {commodity} disease
-              </p>
-            )}
-            <p
-              className="truncate font-bold leading-tight text-navy"
-              style={{ fontSize: `${titleSize}px` }}
-            >
-              {headerTitle}
-            </p>
-            {!isOtherFlow && selectedSpecificType && showSpecificSubtitle && (
-              <p className="truncate text-sm font-semibold text-teal">
-                {selectedSpecificType.label}
-              </p>
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={() =>
-              updateField("flaggedForFollowUp", !details.flaggedForFollowUp)
-            }
-            aria-label={
-              details.flaggedForFollowUp
-                ? "Remove follow up flag"
-                : "Flag for follow up"
-            }
-            aria-pressed={details.flaggedForFollowUp}
-            className={[
-              "flex shrink-0 items-center justify-center rounded-full transition-colors",
-              details.flaggedForFollowUp
-                ? "bg-amber-100 text-amber-700"
-                : "text-muted hover:bg-surface hover:text-navy",
-            ].join(" ")}
-            style={{ width: `${flagSize}px`, height: `${flagSize}px` }}
-          >
-            <FlagIcon filled={details.flaggedForFollowUp} />
-          </button>
-        </div>
-      </div>
-
-      <div
-        ref={scrollRef}
-        onScroll={() => setScrollTop(scrollRef.current?.scrollTop ?? 0)}
-        className="flex-1 overflow-y-auto px-5 pb-4"
-      >
-        {isOtherFlow ? (
-          <section className="mb-8">
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-              Disease name
-            </p>
-            <h2 className="mb-1 text-lg font-bold text-navy">What did you find?</h2>
-            <p className="mb-4 text-sm text-muted">
-              Optional — leave blank if you are not sure
-            </p>
-            <input
-              type="text"
-              value={details.diseaseOther}
-              onChange={(e) => {
-                const value = e.target.value;
-                onChange({
-                  ...details,
-                  diseaseOther: value,
-                  diseaseLabel: value.trim() || "Disease",
-                });
-              }}
-              placeholder="Enter disease name…"
-              className="h-11 w-full rounded-xl border border-border bg-surface px-4 text-sm text-navy outline-none transition-all placeholder:text-muted/60 focus:border-lime focus:ring-2 focus:ring-lime/20"
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div key={step} className="step-enter min-h-0 flex-1 overflow-y-auto px-5 pb-4">
+          {step === "plant-location" && (
+            <PlantLocationStep
+              plantLocations={details.plantLocations}
+              onToggle={togglePlantLocation}
             />
-          </section>
-        ) : (
-          specificTypes.length > 0 && (
-          <section className="mb-8">
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-              Specific type
-            </p>
-            <h2 className="mb-1 text-lg font-bold text-navy">
-              Which {details.diseaseCategoryLabel.toLowerCase()} is it?
-            </h2>
-            <p className="mb-4 text-sm text-muted">Optional — select if you can identify it</p>
+          )}
 
-            <div className="-mx-5 flex gap-3 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {specificTypes.map((type) => {
-                const selected = details.diseaseSpecificTypeId === type.id;
+          {step === "scales" && (
+            <ScalesStep
+              fieldPrevalence={details.fieldPrevalence}
+              severityScale={details.severityScale}
+              onPrevalenceChange={(value) => updateField("fieldPrevalence", value)}
+              onSeverityChange={(value) => updateField("severityScale", value)}
+            />
+          )}
 
-                return (
-                  <button
-                    key={type.id}
-                    type="button"
-                    onClick={() => toggleSpecificType(type.id)}
-                    aria-pressed={selected}
-                    className={[
-                      "w-[9.5rem] shrink-0 overflow-hidden rounded-2xl border text-left transition-all active:scale-[0.98]",
-                      selected
-                        ? "border-lime bg-lime/5 ring-2 ring-lime/30"
-                        : "border-border/80 bg-surface-elevated",
-                    ].join(" ")}
-                  >
-                    <div className="relative aspect-[4/3] w-full bg-surface">
-                      <Image
-                        src={type.imageSrc}
-                        alt={type.label}
-                        fill
-                        className="object-cover"
-                        sizes="152px"
-                      />
-                    </div>
-                    <div className="px-2.5 py-2">
-                      <p className="text-xs font-bold leading-tight text-navy">{type.label}</p>
-                      <p className="mt-1 line-clamp-3 text-[10px] leading-snug text-muted">
-                        {type.description}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-          )
-        )}
-
-        <section className="mb-8">
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-            Plant location
-          </p>
-          <h2 className="mb-4 text-lg font-bold text-navy">Where do you see it?</h2>
-
-          <div className="grid grid-cols-2 gap-2.5">
-            {PLANT_LOCATIONS.map((location) => {
-              const selected = details.plantLocations.includes(location);
-
-              return (
-                <button
-                  key={location}
-                  type="button"
-                  onClick={() => togglePlantLocation(location)}
-                  aria-pressed={selected}
-                  className={[
-                    "rounded-xl border px-3 py-3 text-sm font-semibold transition-all active:scale-[0.98]",
-                    selected
-                      ? "border-lime bg-lime/10 text-lime"
-                      : "border-border bg-surface-elevated text-muted",
-                  ].join(" ")}
-                >
-                  {location}
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        <ScaleSection
-          stepNumber={1}
-          title="Field prevalence"
-          question="How far has it spread?"
-          value={details.fieldPrevalence}
-          valueLabel={FIELD_PREVALENCE_LABELS[details.fieldPrevalence - 1]}
-          minLabel={FIELD_PREVALENCE_LABELS[0]}
-          midLabel={FIELD_PREVALENCE_LABELS[2]}
-          maxLabel={FIELD_PREVALENCE_LABELS[4]}
-          onChange={(value) => updateField("fieldPrevalence", value)}
-        />
-
-        <ScaleSection
-          stepNumber={2}
-          title="Plants affected"
-          question="How many plants show it?"
-          value={details.plantsAffectedScale}
-          valueLabel={PLANTS_AFFECTED_LABELS[details.plantsAffectedScale - 1]}
-          minLabel={PLANTS_AFFECTED_LABELS[0]}
-          midLabel={PLANTS_AFFECTED_LABELS[2]}
-          maxLabel={PLANTS_AFFECTED_LABELS[4]}
-          onChange={(value) => updateField("plantsAffectedScale", value)}
-        />
-
-        <ScaleSection
-          stepNumber={3}
-          title="Severity"
-          question="How badly is each plant affected?"
-          value={details.severityScale}
-          valueLabel={SEVERITY_SCALE_LABELS[details.severityScale - 1]}
-          minLabel={SEVERITY_SCALE_LABELS[0]}
-          midLabel={SEVERITY_SCALE_LABELS[2]}
-          maxLabel={SEVERITY_SCALE_LABELS[4]}
-          onChange={(value) => updateField("severityScale", value)}
-        />
-
-        <section className="mb-8">
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-            Photos
-          </p>
-          <h2 className="mb-4 text-lg font-bold text-navy">Add supporting images</h2>
-          <ObservationMediaSection
-            media={details.media}
-            onMediaChange={(media) => updateField("media", media)}
-            onOpenCamera={onOpenCamera}
-          />
-        </section>
-
-        <section className="mb-4">
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-            Notes
-          </p>
-          <h2 className="mb-4 text-lg font-bold text-navy">Anything else to add?</h2>
-          <textarea
-            value={details.otherNotes}
-            onChange={(e) => updateField("otherNotes", e.target.value)}
-            rows={4}
-            placeholder="Add any additional observations…"
-            className="w-full resize-none rounded-xl border border-border bg-surface px-4 py-3 text-sm text-navy outline-none transition-all placeholder:text-muted/60 focus:border-lime focus:ring-2 focus:ring-lime/20"
-          />
-          <HoldToRecordVoiceNote
-            value={details.voiceNote}
-            onChange={(voiceNote) => updateField("voiceNote", voiceNote)}
-          />
-        </section>
+          {step === "notes" && (
+            <NotesStep
+              details={details}
+              isOtherFlow={isOtherFlow}
+              onChange={onChange}
+              onNotesChange={(value) => updateField("otherNotes", value)}
+              onMediaChange={(media) => updateField("media", media)}
+              onOpenCamera={onOpenCamera}
+            />
+          )}
+        </div>
       </div>
 
       <div className="shrink-0 border-t border-border/60 px-5 py-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+        {step === "notes" ? (
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={details.plantLocations.length === 0}
+            className="btn-primary-block disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+          >
+            Confirm observation
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={goNext}
+            disabled={!canProceed}
+            className="btn-primary-block disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+          >
+            Next
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function DiseaseDetailHeader({
+  commodity,
+  details,
+  headerTitle,
+  onBack,
+  onToggleFlag,
+}: {
+  commodity: string;
+  details: DiseaseObservationDetails;
+  headerTitle: string;
+  onBack: () => void;
+  onToggleFlag: () => void;
+}) {
+  return (
+    <div className="shrink-0 border-b border-border/60 px-5 pb-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
+      <div className="mb-4">
         <button
           type="button"
-          onClick={onSave}
-          disabled={!canSave}
-          className="gradient-brand flex h-12 w-full items-center justify-center rounded-xl text-base font-semibold text-white shadow-lg shadow-lime/25 transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+          onClick={onBack}
+          className="flex items-center gap-1 text-sm font-semibold text-navy transition-colors active:text-teal"
         >
-          Save observation
+          <ChevronLeftIcon />
+          Back
+        </button>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-border/60 bg-surface">
+          {details.diseaseImageSrc ? (
+            details.diseaseImageSrc.startsWith("blob:") ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={details.diseaseImageSrc}
+                alt={headerTitle}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <Image
+                src={details.diseaseImageSrc}
+                alt={headerTitle}
+                fill
+                className="object-cover"
+                sizes="64px"
+              />
+            )
+          ) : null}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+            {commodity} disease
+          </p>
+          <p className="truncate text-xl font-bold leading-tight text-navy">
+            {headerTitle}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={onToggleFlag}
+          aria-label={
+            details.flaggedForFollowUp
+              ? "Remove follow up flag"
+              : "Flag for follow up"
+          }
+          aria-pressed={details.flaggedForFollowUp}
+          className={[
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors",
+            details.flaggedForFollowUp
+              ? "bg-amber-100 text-amber-700"
+              : "text-muted hover:bg-surface hover:text-navy",
+          ].join(" ")}
+        >
+          <FlagIcon filled={details.flaggedForFollowUp} />
         </button>
       </div>
     </div>
   );
 }
 
-function ScaleSection({
-  stepNumber,
-  title,
+function StepProgress({
+  currentStep,
+  totalSteps,
+  onStepSelect,
+}: {
+  currentStep: number;
+  totalSteps: number;
+  onStepSelect: (step: number) => void;
+}) {
+  return (
+    <div className="shrink-0 border-b border-border/40 bg-surface px-5 py-3">
+      <div className="flex gap-1.5">
+        {Array.from({ length: totalSteps }, (_, index) => {
+          const stepNumber = index + 1;
+          const isReached = stepNumber <= currentStep;
+
+          return (
+            <button
+              key={index}
+              type="button"
+              onClick={() => isReached && onStepSelect(stepNumber)}
+              disabled={!isReached}
+              aria-label={`Go to step ${stepNumber}`}
+              aria-current={stepNumber === currentStep ? "step" : undefined}
+              className={[
+                "h-1 flex-1 rounded-full transition-colors duration-300",
+                isReached ? "bg-teal" : "bg-border",
+                isReached ? "cursor-pointer hover:bg-teal-deep/80" : "cursor-default",
+              ].join(" ")}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function PlantLocationStep({
+  plantLocations,
+  onToggle,
+}: {
+  plantLocations: string[];
+  onToggle: (location: string) => void;
+}) {
+  return (
+    <section className="pt-2">
+      <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#e87722]">
+        Plant location
+      </p>
+      <h2 className="mb-4 text-lg font-bold text-navy">Where do you see it?</h2>
+
+      <div className="grid grid-cols-2 gap-2.5">
+        {PLANT_LOCATIONS.map((location) => {
+          const selected = plantLocations.includes(location);
+
+          return (
+            <button
+              key={location}
+              type="button"
+              onClick={() => onToggle(location)}
+              aria-pressed={selected}
+              className={[
+                "rounded-xl border px-3 py-3.5 text-sm font-semibold transition-all active:scale-[0.98]",
+                selected
+                  ? "border-teal bg-teal/10 text-teal"
+                  : "border-border bg-surface-elevated text-muted",
+              ].join(" ")}
+            >
+              {location}
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function ScalesStep({
+  fieldPrevalence,
+  severityScale,
+  onPrevalenceChange,
+  onSeverityChange,
+}: {
+  fieldPrevalence: number;
+  severityScale: number;
+  onPrevalenceChange: (value: number) => void;
+  onSeverityChange: (value: number) => void;
+}) {
+  return (
+    <section className="space-y-4 pt-2">
+      <div className="mb-2">
+        <h2 className="text-lg font-bold text-navy">How bad and how widespread?</h2>
+        <p className="mt-1 text-sm text-muted">
+          Severity describes the affected plant. Spread describes the field.
+        </p>
+      </div>
+
+      <DiseaseScaleCard
+        label="Severity"
+        question="How bad is it on the plant?"
+        value={severityScale}
+        options={DISEASE_SEVERITY_LABELS}
+        accentColor="#dc2626"
+        trackColor="#fecaca"
+        onChange={onSeverityChange}
+      />
+      <DiseaseScaleCard
+        label="Spread"
+        question="How far has it spread?"
+        value={fieldPrevalence}
+        options={DISEASE_SPREAD_LABELS}
+        accentColor="#e87722"
+        trackColor="#374151"
+        onChange={onPrevalenceChange}
+      />
+    </section>
+  );
+}
+
+function DiseaseScaleCard({
+  label,
   question,
   value,
-  valueLabel,
-  minLabel,
-  midLabel,
-  maxLabel,
+  options,
+  accentColor,
+  trackColor,
   onChange,
 }: {
-  stepNumber: number;
-  title: string;
+  label: string;
   question: string;
   value: number;
-  valueLabel: string;
-  minLabel: string;
-  midLabel: string;
-  maxLabel: string;
+  options: readonly string[];
+  accentColor: string;
+  trackColor: string;
   onChange: (value: number) => void;
 }) {
-  const fillPercent = ((value - 1) / 4) * 100;
+  const fillPercent = ((value - 1) / (options.length - 1)) * 100;
 
   return (
-    <section className="mb-8">
-      <div className="mb-1 flex items-start justify-between gap-3">
+    <div className="rounded-2xl border border-border/80 bg-surface-elevated p-4 shadow-sm">
+      <div className="mb-3 flex items-start justify-between gap-3">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
-            {title}
+          <p
+            className="text-[11px] font-semibold uppercase tracking-[0.12em]"
+            style={{ color: accentColor }}
+          >
+            {label}
           </p>
-          <h2 className="mt-1 text-lg font-bold text-navy">{question}</h2>
+          <h3 className="mt-1 text-base font-bold text-navy">{question}</h3>
         </div>
-        <span className="text-3xl font-bold tabular-nums text-[#c4a882]/80">
-          {stepNumber}
+        <span
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold tabular-nums"
+          style={{ backgroundColor: `${accentColor}18`, color: accentColor }}
+        >
+          {value}
         </span>
       </div>
 
-      <div className="mb-4 flex items-center justify-between rounded-2xl bg-[#fff4e6] px-4 py-3">
-        <p className="text-base font-bold text-[#e87722]">{valueLabel}</p>
-        <p className="text-xs font-medium text-muted">{value} of 5</p>
-      </div>
-
-      <div className="relative px-1">
-        <div className="relative h-2 rounded-full bg-[#f0e6dc]">
+      <div className="relative px-0.5">
+        <div
+          className="relative h-2 rounded-full"
+          style={{ backgroundColor: trackColor }}
+        >
           <div
-            className="absolute inset-y-0 left-0 rounded-full bg-[#e87722]"
-            style={{ width: `${fillPercent}%` }}
+            className="absolute inset-y-0 left-0 rounded-full transition-all duration-200"
+            style={{ width: `${fillPercent}%`, backgroundColor: accentColor }}
           />
         </div>
         <input
           type="range"
           min={1}
-          max={5}
+          max={options.length}
           step={1}
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
@@ -442,10 +414,103 @@ function ScaleSection({
         />
       </div>
 
-      <div className="mt-2 flex justify-between text-xs font-medium text-muted">
-        <span>{minLabel}</span>
-        <span>{midLabel}</span>
-        <span>{maxLabel}</span>
+      <div className="mt-3 flex justify-between gap-1">
+        {options.map((option, index) => {
+          const optionValue = index + 1;
+          const selected = value === optionValue;
+
+          return (
+            <div key={option} className="flex min-w-0 flex-1 flex-col items-center gap-1">
+              <span
+                className={[
+                  "h-1.5 w-1.5 rounded-full transition-colors",
+                  selected ? "opacity-100" : "opacity-0",
+                ].join(" ")}
+                style={{ backgroundColor: selected ? accentColor : "transparent" }}
+              />
+              <span
+                className={[
+                  "text-center text-[10px] leading-tight",
+                  selected ? "font-bold text-navy" : "font-medium text-muted",
+                ].join(" ")}
+              >
+                {option}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function NotesStep({
+  details,
+  isOtherFlow,
+  onChange,
+  onNotesChange,
+  onMediaChange,
+  onOpenCamera,
+}: {
+  details: DiseaseObservationDetails;
+  isOtherFlow: boolean;
+  onChange: (details: DiseaseObservationDetails) => void;
+  onNotesChange: (value: string) => void;
+  onMediaChange: (media: ObservationMediaItem[]) => void;
+  onOpenCamera: () => void;
+}) {
+  return (
+    <section className="space-y-6 pt-2">
+      {isOtherFlow && (
+        <div>
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#e87722]">
+            Disease name
+          </p>
+          <h2 className="mb-1 text-lg font-bold text-navy">What did you find?</h2>
+          <p className="mb-4 text-sm text-muted">
+            Optional — leave blank if you are not sure
+          </p>
+          <input
+            type="text"
+            value={details.diseaseOther}
+            onChange={(e) => {
+              const value = e.target.value;
+              onChange({
+                ...details,
+                diseaseOther: value,
+                diseaseLabel: value.trim() || "Disease",
+              });
+            }}
+            placeholder="Enter disease name…"
+            className="h-11 w-full rounded-xl border border-border bg-surface px-4 text-sm text-navy outline-none transition-all placeholder:text-muted/60 focus:border-teal focus:ring-2 focus:ring-teal/20"
+          />
+        </div>
+      )}
+
+      <div>
+        <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#e87722]">
+          Photos
+        </p>
+        <h2 className="mb-4 text-lg font-bold text-navy">Add supporting images</h2>
+        <ObservationMediaSection
+          media={details.media}
+          onMediaChange={onMediaChange}
+          onOpenCamera={onOpenCamera}
+        />
+      </div>
+
+      <div>
+        <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#e87722]">
+          Notes
+        </p>
+        <h2 className="mb-4 text-lg font-bold text-navy">Anything else to add?</h2>
+        <textarea
+          value={details.otherNotes}
+          onChange={(e) => onNotesChange(e.target.value)}
+          rows={4}
+          placeholder="Add any additional observations…"
+          className="w-full resize-none rounded-xl border border-border bg-surface px-4 py-3 text-sm text-navy outline-none transition-all placeholder:text-muted/60 focus:border-teal focus:ring-2 focus:ring-teal/20"
+        />
       </div>
     </section>
   );

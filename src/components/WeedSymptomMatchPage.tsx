@@ -4,7 +4,6 @@ import Image from "next/image";
 import { useMemo, useState } from "react";
 import {
   searchWeedCategories,
-  WEED_CATEGORIES,
   WeedCategory,
 } from "@/lib/observations";
 
@@ -21,11 +20,10 @@ export function WeedSymptomMatchPage({
 }: WeedSymptomMatchPageProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
-  const searchResults = useMemo(
+  const results = useMemo(
     () => searchWeedCategories(searchQuery),
     [searchQuery]
   );
-  const isSearching = searchQuery.trim().length > 0;
 
   return (
     <div className="absolute inset-0 z-50 flex flex-col overflow-hidden bg-surface-elevated">
@@ -55,46 +53,32 @@ export function WeedSymptomMatchPage({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search weeds…"
-            className="h-11 w-full rounded-xl border border-border bg-surface py-0 pl-10 pr-4 text-sm text-navy outline-none transition-all placeholder:text-muted/60 focus:border-lime focus:ring-2 focus:ring-lime/20"
+            className="h-11 w-full rounded-xl border border-border bg-surface py-0 pl-10 pr-4 text-sm text-navy outline-none transition-all placeholder:text-muted/60 focus:border-teal focus:ring-2 focus:ring-teal/20"
           />
         </label>
       </div>
 
-      {isSearching ? (
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-3">
-          {searchResults.length > 0 ? (
-            <div className="space-y-2.5">
-              {searchResults.map((result) => (
-                <SearchResultCard
-                  key={result.category.id}
-                  category={result.category}
-                  matchedLabel={result.matchedLabel}
-                  onSelect={() => onSelect(result.category.id)}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="flex h-full flex-col items-center justify-center px-4 py-8 text-center">
-              <p className="text-sm font-semibold text-navy">No matches found</p>
-              <p className="mt-1 text-sm text-muted">
-                Try a weed name or browse the categories below.
-              </p>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-3">
-          <div className="grid grid-cols-2 gap-3">
-            {WEED_CATEGORIES.map((category) => (
-              <CategoryGridCard
-                key={category.id}
-                category={category}
-                onSelect={() => onSelect(category.id)}
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-3">
+        {results.length > 0 ? (
+          <div className="space-y-2.5">
+            {results.map((result) => (
+              <SearchResultCard
+                key={result.category.id}
+                category={result.category}
+                matchedLabel={result.matchedLabel}
+                onSelect={() => onSelect(result.category.id)}
               />
             ))}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="flex h-full flex-col items-center justify-center px-4 py-8 text-center">
+            <p className="text-sm font-semibold text-navy">No matches found</p>
+            <p className="mt-1 text-sm text-muted">
+              Try a weed name or clear your search to browse all categories.
+            </p>
+          </div>
+        )}
+      </div>
 
       <div className="shrink-0 px-6 pt-2">
         <button
@@ -116,39 +100,6 @@ export function WeedSymptomMatchPage({
 
       <div className="shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]" />
     </div>
-  );
-}
-
-function CategoryGridCard({
-  category,
-  onSelect,
-}: {
-  category: WeedCategory;
-  onSelect: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className="flex min-h-[8.5rem] flex-col overflow-hidden rounded-2xl border border-border/80 bg-surface-elevated text-left shadow-sm transition-all active:scale-[0.98]"
-    >
-      <div className="relative min-h-0 flex-1 bg-surface">
-        <Image
-          src={category.imageSrc}
-          alt={category.label}
-          fill
-          unoptimized
-          className="object-cover"
-          sizes="(max-width: 430px) 50vw, 200px"
-        />
-      </div>
-      <div className="shrink-0 px-2.5 py-2">
-        <p className="text-xs font-bold leading-tight text-navy">{category.label}</p>
-        <p className="mt-0.5 line-clamp-2 text-[10px] leading-snug text-muted">
-          {category.description}
-        </p>
-      </div>
-    </button>
   );
 }
 

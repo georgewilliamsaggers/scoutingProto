@@ -131,7 +131,7 @@ export function LogObservationSheet({
         <button
           type="button"
           onClick={handleSave}
-          className="gradient-brand flex h-12 w-full items-center justify-center rounded-xl text-base font-semibold text-white shadow-lg shadow-lime/25 transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+          className="btn-primary-block disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
         >
           Save observation
         </button>

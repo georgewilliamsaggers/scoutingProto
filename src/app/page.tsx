@@ -64,7 +64,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="h-12 rounded-xl border border-border bg-surface px-4 text-base text-navy outline-none transition-all placeholder:text-muted/60 focus:border-lime focus:ring-2 focus:ring-lime/20"
+              className="h-12 rounded-xl border border-border bg-surface px-4 text-base text-navy outline-none transition-all placeholder:text-muted/60 focus:border-teal focus:ring-2 focus:ring-teal/20"
             />
           </div>
 
@@ -89,7 +89,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="h-12 w-full rounded-xl border border-border bg-surface px-4 pr-12 text-base text-navy outline-none transition-all placeholder:text-muted/60 focus:border-lime focus:ring-2 focus:ring-lime/20"
+                className="h-12 w-full rounded-xl border border-border bg-surface px-4 pr-12 text-base text-navy outline-none transition-all placeholder:text-muted/60 focus:border-teal focus:ring-2 focus:ring-teal/20"
               />
               <button
                 type="button"
@@ -105,7 +105,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="gradient-brand mt-2 flex h-12 items-center justify-center gap-2 rounded-xl text-base font-semibold text-white shadow-lg shadow-lime/25 transition-all active:scale-[0.98] disabled:opacity-70"
+            className="btn-primary-pill mt-2 disabled:opacity-70"
           >
             {isLoading ? (
               <>
@@ -113,7 +113,10 @@ export default function LoginPage() {
                 Signing in…
               </>
             ) : (
-              "Sign in"
+              <>
+                <ArrowRightIcon />
+                Sign in
+              </>
             )}
           </button>
         </form>
@@ -131,7 +134,7 @@ export default function LoginPage() {
         <button
           type="button"
           onClick={handleDemoLogin}
-          className="flex flex-col items-center justify-center gap-0.5 rounded-xl border border-border bg-surface px-4 py-3 text-sm font-medium text-navy transition-all hover:border-lime/40 hover:bg-lime/5 active:scale-[0.98]"
+          className="flex flex-col items-center justify-center gap-0.5 rounded-xl border border-border bg-surface px-4 py-3 text-sm font-medium text-navy transition-all hover:border-teal/40 hover:bg-teal/5 active:scale-[0.98]"
         >
           <span className="flex items-center gap-2">
             <DemoIcon />
@@ -154,6 +157,15 @@ export default function LoginPage() {
         </p>
       </div>
     </MobileShell>
+  );
+}
+
+function ArrowRightIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 12h14" />
+      <path d="m13 6 6 6-6 6" />
+    </svg>
   );
 }
 

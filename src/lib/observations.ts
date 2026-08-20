@@ -4,75 +4,118 @@ export type ObservationType =
   | "weed"
   | "moisture"
   | "other"
+  | "population"
   | "voice_note";
 
 export const OBSERVATION_TYPES: {
   id: ObservationType;
   label: string;
   supportText?: string;
+  emoji?: string;
   tileClass: string;
   borderClass: string;
+  iconContainerClass: string;
+  accentClass: string;
   iconClass: string;
   textClass: string;
   badgeClass: string;
 }[] = [
   {
-    id: "disease",
-    label: "Disease",
-    tileClass: "bg-red-50 active:bg-red-100",
-    borderClass: "border-2 border-red-200",
-    iconClass: "text-red-800",
-    textClass: "text-red-900",
-    badgeClass: "bg-red-300 text-white",
+    id: "pest",
+    label: "Pest / insect",
+    supportText: "What insect or pest can you see?",
+    emoji: "🐛",
+    tileClass: "bg-surface-elevated active:bg-stone-50",
+    borderClass: "border border-border/50",
+    iconContainerClass: "bg-rose-50",
+    accentClass: "bg-rose-100/70",
+    iconClass: "text-rose-700",
+    textClass: "text-navy",
+    badgeClass: "bg-rose-400 text-white",
   },
   {
-    id: "pest",
-    label: "Pest",
-    tileClass: "bg-amber-50 active:bg-amber-100",
-    borderClass: "border-2 border-amber-200",
-    iconClass: "text-amber-900",
-    textClass: "text-amber-950",
-    badgeClass: "bg-amber-300 text-amber-950",
+    id: "disease",
+    label: "Disease",
+    supportText: "Where is the crop looking unhealthy?",
+    emoji: "🎯",
+    tileClass: "bg-surface-elevated active:bg-stone-50",
+    borderClass: "border border-border/50",
+    iconContainerClass: "bg-orange-50",
+    accentClass: "bg-orange-100/70",
+    iconClass: "text-orange-700",
+    textClass: "text-navy",
+    badgeClass: "bg-orange-400 text-white",
   },
   {
     id: "weed",
     label: "Weed",
-    tileClass: "bg-emerald-50 active:bg-emerald-100",
-    borderClass: "border-2 border-emerald-200",
+    supportText: "What kind of unwanted plant is present?",
+    emoji: "🌿",
+    tileClass: "bg-surface-elevated active:bg-stone-50",
+    borderClass: "border border-border/50",
+    iconContainerClass: "bg-emerald-50",
+    accentClass: "bg-emerald-100/70",
     iconClass: "text-emerald-700",
-    textClass: "text-emerald-900",
-    badgeClass: "bg-emerald-300 text-white",
+    textClass: "text-navy",
+    badgeClass: "bg-emerald-400 text-white",
   },
   {
     id: "moisture",
     label: "Moisture",
-    tileClass: "bg-sky-50 active:bg-sky-100",
-    borderClass: "border-2 border-sky-200",
-    iconClass: "text-sky-800",
-    textClass: "text-sky-900",
-    badgeClass: "bg-sky-300 text-white",
+    supportText: "Observe plants, soil—or both.",
+    emoji: "💧",
+    tileClass: "bg-surface-elevated active:bg-stone-50",
+    borderClass: "border border-border/50",
+    iconContainerClass: "bg-sky-50",
+    accentClass: "bg-sky-100/70",
+    iconClass: "text-sky-700",
+    textClass: "text-navy",
+    badgeClass: "bg-sky-400 text-white",
   },
   {
     id: "other",
     label: "Other",
     supportText: "Capture a general observation",
-    tileClass: "bg-slate-100 active:bg-slate-200",
-    borderClass: "border-2 border-slate-300",
-    iconClass: "text-slate-600",
-    textClass: "text-slate-800",
-    badgeClass: "bg-slate-300 text-white",
+    emoji: "⋯",
+    tileClass: "bg-surface-elevated active:bg-stone-50",
+    borderClass: "border border-border/50",
+    iconContainerClass: "bg-stone-100",
+    accentClass: "bg-stone-200/70",
+    iconClass: "text-stone-600",
+    textClass: "text-navy",
+    badgeClass: "bg-stone-400 text-white",
+  },
+  {
+    id: "population",
+    label: "Population",
+    supportText: "Count plants in this crop",
+    emoji: "🌱",
+    tileClass: "bg-surface-elevated active:bg-stone-50",
+    borderClass: "border border-border/50",
+    iconContainerClass: "bg-amber-50",
+    accentClass: "bg-amber-100/70",
+    iconClass: "text-amber-700",
+    textClass: "text-navy",
+    badgeClass: "bg-amber-400 text-white",
   },
   {
     id: "voice_note",
     label: "Voice note",
     supportText: "Record a voice note of our observations",
-    tileClass: "bg-indigo-50 active:bg-indigo-100",
-    borderClass: "border-2 border-indigo-200",
+    emoji: "🎙️",
+    tileClass: "bg-surface-elevated active:bg-stone-50",
+    borderClass: "border border-border/50",
+    iconContainerClass: "bg-indigo-50",
+    accentClass: "bg-indigo-100/70",
     iconClass: "text-indigo-700",
-    textClass: "text-indigo-900",
-    badgeClass: "bg-indigo-300 text-white",
+    textClass: "text-navy",
+    badgeClass: "bg-indigo-400 text-white",
   },
 ];
+
+export const LOG_OBSERVATION_TILE_TYPES = OBSERVATION_TYPES.filter(
+  (entry) => entry.id !== "voice_note"
+);
 
 export function getObservationLabel(type: ObservationType): string {
   return OBSERVATION_TYPES.find((entry) => entry.id === type)?.label ?? "Observation";
@@ -94,6 +137,7 @@ export const OBSERVATION_MAP_COLORS: Record<ObservationType, string> = {
   weed: "#84bd00",
   moisture: "#0284c7",
   other: "#64748b",
+  population: "#d97706",
   voice_note: "#4f46e5",
 };
 
@@ -367,7 +411,15 @@ function buildObservationSearchGroups<
   getSpeciesForCategory: (categoryId: string) => TSpecies[]
 ): { category: TCategory; species: TSpecies[] }[] {
   const normalizedQuery = query.trim().toLowerCase();
-  if (!normalizedQuery) return [];
+
+  if (!normalizedQuery) {
+    return categories
+      .map((category) => ({
+        category,
+        species: getSpeciesForCategory(category.id),
+      }))
+      .sort((a, b) => a.category.label.localeCompare(b.category.label));
+  }
 
   const groups: { category: TCategory; species: TSpecies[] }[] = [];
 
@@ -567,6 +619,15 @@ export function getPestCategoryGridPages(): (PestCategory | null)[][] {
 }
 
 export function searchPestGroups(query: string): PestSearchGroup[] {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return PEST_CATEGORIES.map((category) => ({
+      category,
+      species: [],
+    })).sort((a, b) => a.category.label.localeCompare(b.category.label));
+  }
+
   return buildObservationSearchGroups(
     query,
     PEST_CATEGORIES,
@@ -644,8 +705,8 @@ export function getPestDisplayName(details: PestObservationDetails): string {
 export function formatPestSummary(details: PestObservationDetails): string {
   const pestLabel = getPestDisplayName(details);
   const prevalenceLabel = FIELD_PREVALENCE_LABELS[details.fieldPrevalence - 1] ?? "";
-  const countLabel = PLANTS_AFFECTED_LABELS[details.pestCountScale - 1] ?? "";
-  const severityLabel = SEVERITY_SCALE_LABELS[details.damageSeverityScale - 1] ?? "";
+  const countLabel = PEST_AMOUNT_LABELS[details.pestCountScale - 1] ?? "";
+  const severityLabel = PEST_DAMAGE_LABELS[details.damageSeverityScale - 1] ?? "";
 
   const parts = [
     pestLabel && `Pest: ${pestLabel}`,
@@ -692,12 +753,44 @@ export const FIELD_PREVALENCE_LABELS = [
   "Whole field",
 ] as const;
 
+export const PEST_AMOUNT_LABELS = [
+  "One",
+  "Few",
+  "Some",
+  "Many",
+  "Very many",
+] as const;
+
+export const PEST_DAMAGE_LABELS = [
+  "No damage",
+  "Light",
+  "Moderate",
+  "Heavy",
+  "Severe",
+] as const;
+
 export const PLANTS_AFFECTED_LABELS = [
   "1 in 10",
   "2–3 in 10",
   "4–5 in 10",
   "6–8 in 10",
   "9–10 in 10",
+] as const;
+
+export const DISEASE_SEVERITY_LABELS = [
+  "Trace",
+  "Low",
+  "Moderate",
+  "High",
+  "Severe",
+] as const;
+
+export const DISEASE_SPREAD_LABELS = [
+  "One plant",
+  "A few plants",
+  "Small patches",
+  "Several patches",
+  "Across field",
 ] as const;
 
 export const SEVERITY_SCALE_LABELS = [
@@ -761,7 +854,7 @@ export const EMPTY_DISEASE_DETAILS: DiseaseObservationDetails = {
   diseaseSpecificTypeId: "",
   diseaseOther: "",
   plantLocations: [],
-  fieldPrevalence: 2,
+  fieldPrevalence: 1,
   plantsAffectedScale: 2,
   severityScale: 2,
   flaggedForFollowUp: false,
@@ -779,13 +872,6 @@ export const EMPTY_DISEASE_DETAILS: DiseaseObservationDetails = {
 export function getDiseaseDisplayName(details: DiseaseObservationDetails): string {
   if (details.diseaseCategoryId === "other") {
     return details.diseaseOther.trim() || "Disease";
-  }
-
-  if (details.diseaseSpecificTypeId) {
-    const specificType = getDiseaseSpecificType(details.diseaseSpecificTypeId);
-    if (specificType) {
-      return `${details.diseaseCategoryLabel} · ${specificType.label}`;
-    }
   }
 
   if (details.diseaseCategoryLabel.trim()) {
@@ -826,20 +912,16 @@ export function canSaveDiseaseObservation(details: DiseaseObservationDetails): b
 
 export function formatDiseaseSummary(details: DiseaseObservationDetails): string {
   const diseaseLabel = getDiseaseDisplayName(details);
-  const prevalenceLabel =
-    FIELD_PREVALENCE_LABELS[details.fieldPrevalence - 1] ?? "";
-  const plantsAffectedLabel =
-    PLANTS_AFFECTED_LABELS[details.plantsAffectedScale - 1] ?? "";
+  const spreadLabel = DISEASE_SPREAD_LABELS[details.fieldPrevalence - 1] ?? "";
   const severityLabel =
-    SEVERITY_SCALE_LABELS[details.severityScale - 1] ?? "";
+    DISEASE_SEVERITY_LABELS[details.severityScale - 1] ?? "";
 
   const parts = [
     diseaseLabel && `Disease: ${diseaseLabel}`,
     details.plantLocations.length > 0 &&
       `Location: ${details.plantLocations.join(", ")}`,
-    prevalenceLabel && `Spread: ${prevalenceLabel}`,
-    plantsAffectedLabel && `Plants affected: ${plantsAffectedLabel}`,
     severityLabel && `Severity: ${severityLabel}`,
+    spreadLabel && `Spread: ${spreadLabel}`,
     details.flaggedForFollowUp ? "Flagged for follow up" : null,
     details.symptomLocation && `Location: ${details.symptomLocation}`,
     details.lesionType && `Lesion: ${details.lesionType}`,
@@ -996,7 +1078,12 @@ export function getWeedSpecificTypesForCategory(categoryId: string): WeedSpecifi
 
 export function searchWeedCategories(query: string): WeedCategorySearchResult[] {
   const normalizedQuery = query.trim().toLowerCase();
-  if (!normalizedQuery) return [];
+
+  if (!normalizedQuery) {
+    return WEED_CATEGORIES.map((category) => ({ category })).sort((a, b) =>
+      a.category.label.localeCompare(b.category.label)
+    );
+  }
 
   const results = new Map<string, WeedCategorySearchResult>();
 
@@ -1037,21 +1124,36 @@ export function searchWeedCategories(query: string): WeedCategorySearchResult[] 
   );
 }
 
-export const WEED_SIZE_OPTIONS = [
-  { label: "Germinating", subtitle: "First leaves" },
-  { label: "Small", subtitle: "2–3 leaves" },
-  { label: "Established", subtitle: "4–6 leaves" },
-  { label: "Large", subtitle: "7+ leaves" },
-  { label: "Flowering", subtitle: "In flower" },
+export const WEED_GROWTH_STAGE_LABELS = [
+  "Germinating",
+  "2-leaf",
+  "4-leaf",
+  "6-leaf",
+  "8-leaf",
+  "Large",
+  "Very large",
+  "Flowering",
 ] as const;
 
-export const WEED_DENSITY_OPTIONS = [
-  { label: "Single", subtitle: "Just one" },
-  { label: "Few", subtitle: "Hard to spot" },
-  { label: "Some", subtitle: "Easy to see" },
-  { label: "Plenty", subtitle: "Throughout area" },
-  { label: "Dense", subtitle: "Everywhere" },
+export const WEED_AMOUNT_LABELS = [
+  "Single",
+  "Few",
+  "Some",
+  "Plenty",
+  "Dense",
 ] as const;
+
+/** @deprecated Use WEED_GROWTH_STAGE_LABELS */
+export const WEED_SIZE_OPTIONS = WEED_GROWTH_STAGE_LABELS.map((label) => ({
+  label,
+  subtitle: "",
+}));
+
+/** @deprecated Use WEED_AMOUNT_LABELS */
+export const WEED_DENSITY_OPTIONS = WEED_AMOUNT_LABELS.map((label) => ({
+  label,
+  subtitle: "",
+}));
 
 export interface WeedObservationDetails {
   weed: string;
@@ -1079,8 +1181,8 @@ export const EMPTY_WEED_DETAILS: WeedObservationDetails = {
   weedCategoryImageSrc: "",
   weedSpecificTypeId: "",
   weedOther: "",
-  sizeScale: 3,
-  densityScale: 3,
+  sizeScale: 1,
+  densityScale: 2,
   flaggedForFollowUp: false,
   otherNotes: "",
   media: [],
@@ -1094,7 +1196,7 @@ export function getWeedDisplayName(details: WeedObservationDetails): string {
   if (details.weedSpecificTypeId) {
     const specificType = getWeedSpecificType(details.weedSpecificTypeId);
     if (specificType) {
-      return specificType.label;
+      return `${details.weedCategoryLabel} · ${specificType.label}`;
     }
   }
 
@@ -1111,8 +1213,9 @@ export function canSaveWeedObservation(details: WeedObservationDetails): boolean
 
 export function formatWeedSummary(details: WeedObservationDetails): string {
   const weedLabel = getWeedDisplayName(details);
-  const sizeLabel = WEED_SIZE_OPTIONS[details.sizeScale - 1]?.label ?? "";
-  const densityLabel = WEED_DENSITY_OPTIONS[details.densityScale - 1]?.label ?? "";
+  const growthStageLabel =
+    WEED_GROWTH_STAGE_LABELS[details.sizeScale - 1] ?? "";
+  const amountLabel = WEED_AMOUNT_LABELS[details.densityScale - 1] ?? "";
 
   const parts = [
     weedLabel && `Weed: ${weedLabel}`,
@@ -1120,8 +1223,8 @@ export function formatWeedSummary(details: WeedObservationDetails): string {
       !details.weedSpecificTypeId &&
       details.weedCategoryId !== "other" &&
       `Type: ${details.weedCategoryLabel}`,
-    sizeLabel && `Size: ${sizeLabel}`,
-    densityLabel && `Density: ${densityLabel}`,
+    growthStageLabel && `Growth stage: ${growthStageLabel}`,
+    amountLabel && `Amount: ${amountLabel}`,
     details.flaggedForFollowUp ? "Flagged for follow up" : null,
     details.otherNotes.trim() || null,
     details.voiceNote && formatVoiceNoteSummary(details.voiceNote),
@@ -1142,13 +1245,30 @@ export function formatWeedSummary(details: WeedObservationDetails): string {
 }
 
 export const MOISTURE_DEPTHS = [
-  { id: "0_20", label: "0–20 cm", step: 1 },
-  { id: "20_40", label: "20–40 cm", step: 2 },
-  { id: "40_60", label: "40–60 cm", step: 3 },
-  { id: "60_80", label: "60–80 cm", step: 4 },
+  { id: "0_10", label: "0–10 cm", step: 1 },
+  { id: "10_20", label: "10–20 cm", step: 2 },
+  { id: "20_40", label: "20–40 cm", step: 3 },
+  { id: "40_60", label: "40–60 cm", step: 4 },
+  { id: "60_80", label: "60–80 cm", step: 5 },
 ] as const;
 
 export type MoistureDepth = (typeof MOISTURE_DEPTHS)[number];
+
+export const PLANT_CONDITION_LABELS = [
+  "Leaves burning / dying",
+  "Severely wilted",
+  "Wilted",
+  "Slight stress",
+  "Lush / growing",
+] as const;
+
+export const PLANT_AREA_AFFECTED_LABELS = [
+  "Single plants",
+  "Small spots",
+  "Several patches",
+  "Large areas",
+  "Most of field",
+] as const;
 
 export const MOISTURE_LEVELS = [
   {
@@ -1196,10 +1316,18 @@ export interface MoistureDepthReading {
 }
 
 export interface MoistureObservationDetails {
+  includePlantCondition: boolean;
+  includeSoilMoisture: boolean;
+  plantConditionScale: number;
+  areaAffectedScale: number;
   readings: MoistureDepthReading[];
 }
 
 export const EMPTY_MOISTURE_DETAILS: MoistureObservationDetails = {
+  includePlantCondition: false,
+  includeSoilMoisture: false,
+  plantConditionScale: 3,
+  areaAffectedScale: 2,
   readings: [],
 };
 
@@ -1217,32 +1345,154 @@ export function formatMoistureLevelValue(level: number): string {
 }
 
 export function formatMoistureSummary(details: MoistureObservationDetails): string {
-  if (details.readings.length === 0) {
-    return "Moisture check logged.";
+  const parts: (string | null | false)[] = [];
+
+  if (details.includePlantCondition) {
+    const conditionLabel =
+      PLANT_CONDITION_LABELS[details.plantConditionScale - 1] ?? "";
+    const areaLabel = PLANT_AREA_AFFECTED_LABELS[details.areaAffectedScale - 1] ?? "";
+    if (conditionLabel) parts.push(`Plants: ${conditionLabel}`);
+    if (areaLabel) parts.push(`Area: ${areaLabel}`);
   }
 
-  const parts = details.readings.map((reading) => {
-    const depth = getMoistureDepth(reading.depthId);
-    const level = getMoistureLevelForValue(reading.level);
-    const depthLabel = depth?.label ?? reading.depthId;
-    return `${depthLabel}: ${level.label}`;
-  });
+  if (details.includeSoilMoisture || details.readings.length > 0) {
+    const soilParts = details.readings.map((reading) => {
+      const depth = getMoistureDepth(reading.depthId);
+      const level = getMoistureLevelForValue(reading.level);
+      const depthLabel = depth?.label ?? reading.depthId;
+      return `${depthLabel}: ${level.label}`;
+    });
+    if (soilParts.length > 0) {
+      parts.push(`Soil · ${soilParts.join(" · ")}`);
+    }
+  }
 
-  return `Moisture · ${parts.join(" · ")}`;
+  const filtered = parts.filter(Boolean);
+  return filtered.length > 0
+    ? `Moisture · ${filtered.join(" · ")}`
+    : "Moisture check logged.";
+}
+
+export type PopulationCountMethod = "square" | "row";
+
+/** Project-level quadrat size supplied by the backend. */
+export const PROJECT_POPULATION_SQUARE = {
+  widthMeters: 0.5,
+  heightMeters: 0.5,
+} as const;
+
+/** Project-level row length supplied by the backend. */
+export const PROJECT_POPULATION_ROW_LENGTH_M = 10;
+
+export interface PopulationObservationDetails {
+  method: PopulationCountMethod;
+  plantCount: number;
+  squareWidthMeters: number;
+  squareHeightMeters: number;
+  rowLengthMeters: number;
+}
+
+export const EMPTY_POPULATION_DETAILS: PopulationObservationDetails = {
+  method: "square",
+  plantCount: 0,
+  squareWidthMeters: PROJECT_POPULATION_SQUARE.widthMeters,
+  squareHeightMeters: PROJECT_POPULATION_SQUARE.heightMeters,
+  rowLengthMeters: PROJECT_POPULATION_ROW_LENGTH_M,
+};
+
+export function createPopulationDetails(
+  method: PopulationCountMethod
+): PopulationObservationDetails {
+  return {
+    ...EMPTY_POPULATION_DETAILS,
+    method,
+  };
+}
+
+export function getPopulationSquareAreaM2(
+  details: PopulationObservationDetails
+): number {
+  return details.squareWidthMeters * details.squareHeightMeters;
+}
+
+export function formatPopulationSquareLabel(
+  details: PopulationObservationDetails
+): string {
+  return `${details.squareWidthMeters} m × ${details.squareHeightMeters} m`;
+}
+
+export function formatPopulationDensity(
+  details: PopulationObservationDetails
+): string | null {
+  if (details.method === "square") {
+    const area = getPopulationSquareAreaM2(details);
+    if (area <= 0) return null;
+    const perM2 = details.plantCount / area;
+    const rounded = Number.isInteger(perM2) ? String(perM2) : perM2.toFixed(0);
+    return `${rounded} plants/m²`;
+  }
+
+  if (details.rowLengthMeters <= 0) return null;
+  const perM = details.plantCount / details.rowLengthMeters;
+  const rounded = Number.isInteger(perM) ? String(perM) : perM.toFixed(1);
+  return `${rounded} plants/m`;
+}
+
+export function formatPopulationSummary(
+  details: PopulationObservationDetails
+): string {
+  const density = formatPopulationDensity(details);
+  const countLabel = `${details.plantCount} plant${details.plantCount === 1 ? "" : "s"}`;
+
+  if (details.method === "square") {
+    const parts = [
+      `Population · ${countLabel} in ${formatPopulationSquareLabel(details)} square`,
+      density,
+    ].filter(Boolean);
+    return parts.join(" · ");
+  }
+
+  const parts = [
+    `Population · ${countLabel} in ${details.rowLengthMeters} m row`,
+    density,
+  ].filter(Boolean);
+  return parts.join(" · ");
+}
+
+export function getPopulationCollapsedSummary(
+  details: PopulationObservationDetails
+): string {
+  const countLabel = `${details.plantCount} plant${details.plantCount === 1 ? "" : "s"}`;
+
+  if (details.method === "square") {
+    return `${countLabel} in ${formatPopulationSquareLabel(details)} square`;
+  }
+
+  return `${countLabel} in ${details.rowLengthMeters} m row`;
 }
 
 export function getMoistureCollapsedSummary(
   details: MoistureObservationDetails
 ): string {
-  if (details.readings.length === 0) return "Moisture check logged";
+  const parts: string[] = [];
 
-  const labels = details.readings.map((reading) => {
-    const depth = getMoistureDepth(reading.depthId);
-    const level = getMoistureLevelForValue(reading.level);
-    return `${depth?.label ?? reading.depthId} ${level.label.toLowerCase()}`;
-  });
+  if (details.includePlantCondition) {
+    const conditionLabel =
+      PLANT_CONDITION_LABELS[details.plantConditionScale - 1];
+    const areaLabel = PLANT_AREA_AFFECTED_LABELS[details.areaAffectedScale - 1];
+    if (conditionLabel) parts.push(conditionLabel.toLowerCase());
+    if (areaLabel) parts.push(areaLabel.toLowerCase());
+  }
 
-  return labels.join(" · ");
+  if (details.includeSoilMoisture || details.readings.length > 0) {
+    details.readings.forEach((reading) => {
+      const depth = getMoistureDepth(reading.depthId);
+      const level = getMoistureLevelForValue(reading.level);
+      parts.push(`${depth?.label ?? reading.depthId} ${level.label.toLowerCase()}`);
+    });
+  }
+
+  return parts.length > 0 ? parts.join(" · ") : "Moisture check logged";
 }
 
 export interface VoiceNoteDetails {
@@ -1270,12 +1520,14 @@ export interface ScoutingObservation {
   type: ObservationType;
   note: string;
   createdAt: string;
+  fieldId?: string;
   location?: ObservationLocation;
   diseaseDetails?: DiseaseObservationDetails;
   pestDetails?: PestObservationDetails;
   otherDetails?: OtherObservationDetails;
   weedDetails?: WeedObservationDetails;
   moistureDetails?: MoistureObservationDetails;
+  populationDetails?: PopulationObservationDetails;
   voiceNoteDetails?: VoiceNoteDetails;
 }
 
@@ -1330,6 +1582,7 @@ export function createObservation(
   voiceNoteDetails?: VoiceNoteDetails,
   pestDetails?: PestObservationDetails,
   moistureDetails?: MoistureObservationDetails,
+  populationDetails?: PopulationObservationDetails,
   fieldId?: string
 ): ScoutingObservation {
   const id = `obs-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -1339,12 +1592,14 @@ export function createObservation(
     type,
     note,
     createdAt: new Date().toISOString(),
+    fieldId,
     location: fieldId ? generateObservationLocation(fieldId, id) : undefined,
     diseaseDetails,
     pestDetails,
     otherDetails,
     weedDetails,
     moistureDetails,
+    populationDetails,
     voiceNoteDetails,
   };
 }

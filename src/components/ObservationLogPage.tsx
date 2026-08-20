@@ -2,9 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { formatDuration } from "@/hooks/useVoiceRecorder";
+import { ObservationTypeBadge } from "@/components/ObservationTypeIcon";
 import {
   DiseaseObservationDetails,
+  DISEASE_SEVERITY_LABELS,
+  DISEASE_SPREAD_LABELS,
   FIELD_PREVALENCE_LABELS,
+  formatPopulationDensity,
+  formatPopulationSquareLabel,
   getDiseaseDisplayName,
   getDiseaseSpecificType,
   getMoistureCollapsedSummary,
@@ -13,16 +18,20 @@ import {
   getObservationLabel,
   getPestDisplayName,
   getPestSpecificType,
+  getPopulationCollapsedSummary,
   getWeedDisplayName,
   MoistureObservationDetails,
   OBSERVATION_TYPES,
   PestObservationDetails,
+  PLANT_AREA_AFFECTED_LABELS,
+  PLANT_CONDITION_LABELS,
   PLANTS_AFFECTED_LABELS,
+  PopulationObservationDetails,
   SEVERITY_SCALE_LABELS,
   ScoutingObservation,
   VoiceNoteDetails,
-  WEED_DENSITY_OPTIONS,
-  WEED_SIZE_OPTIONS,
+  WEED_AMOUNT_LABELS,
+  WEED_GROWTH_STAGE_LABELS,
   WeedObservationDetails,
 } from "@/lib/observations";
 
@@ -87,8 +96,12 @@ export function ObservationLogPage({
                             onClick={() =>
                               setExpandedId(expanded ? null : observation.id)
                             }
-                            className="flex w-full items-start gap-2 px-3.5 py-3 text-left transition-colors hover:bg-surface"
+                            className="flex w-full items-start gap-3 px-3.5 py-3 text-left transition-colors hover:bg-surface"
                           >
+                            <ObservationTypeBadge
+                              type={observation.type}
+                              size="sm"
+                            />
                             <div className="min-w-0 flex-1">
                               <div className="flex items-start justify-between gap-3">
                                 <p className="text-sm font-semibold text-navy">
@@ -144,6 +157,10 @@ function getObservationTitle(observation: ScoutingObservation): string {
     return getMoistureCollapsedSummary(observation.moistureDetails);
   }
 
+  if (observation.type === "population" && observation.populationDetails) {
+    return getPopulationCollapsedSummary(observation.populationDetails);
+  }
+
   if (observation.note.trim()) {
     return observation.note.trim();
   }
@@ -166,6 +183,10 @@ function CollapsedSummary({ observation }: { observation: ScoutingObservation })
 
   if (observation.type === "moisture" && observation.moistureDetails) {
     return null;
+  }
+
+  if (observation.type === "population" && observation.populationDetails) {
+    return <PopulationCollapsedSummary details={observation.populationDetails} />;
   }
 
   if (observation.note) {
@@ -238,11 +259,11 @@ function WeedCollapsedSummary({
 }: {
   details: WeedObservationDetails;
 }) {
-  const sizeLabel = WEED_SIZE_OPTIONS[details.sizeScale - 1]?.label;
-  const densityLabel = WEED_DENSITY_OPTIONS[details.densityScale - 1]?.label;
+  const growthStageLabel = WEED_GROWTH_STAGE_LABELS[details.sizeScale - 1];
+  const amountLabel = WEED_AMOUNT_LABELS[details.densityScale - 1];
   const parts = [
-    sizeLabel && sizeLabel.toLowerCase(),
-    densityLabel && `${densityLabel.toLowerCase()} density`,
+    growthStageLabel && growthStageLabel.toLowerCase(),
+    amountLabel && amountLabel.toLowerCase(),
   ].filter(Boolean);
 
   return (
@@ -274,6 +295,10 @@ function ExpandedDetails({ observation }: { observation: ScoutingObservation }) 
 
   if (observation.type === "moisture" && observation.moistureDetails) {
     return <MoistureExpandedDetails details={observation.moistureDetails} />;
+  }
+
+  if (observation.type === "population" && observation.populationDetails) {
+    return <PopulationExpandedDetails details={observation.populationDetails} />;
   }
 
   return (
@@ -334,20 +359,14 @@ function DiseaseExpandedDetails({
         )}
         {details.fieldPrevalence > 0 && (
           <DetailRow
-            label="Field prevalence"
-            value={FIELD_PREVALENCE_LABELS[details.fieldPrevalence - 1]}
-          />
-        )}
-        {details.plantsAffectedScale > 0 && (
-          <DetailRow
-            label="Plants affected"
-            value={PLANTS_AFFECTED_LABELS[details.plantsAffectedScale - 1]}
+            label="Spread"
+            value={DISEASE_SPREAD_LABELS[details.fieldPrevalence - 1]}
           />
         )}
         {details.severityScale > 0 && (
           <DetailRow
             label="Severity"
-            value={SEVERITY_SCALE_LABELS[details.severityScale - 1]}
+            value={DISEASE_SEVERITY_LABELS[details.severityScale - 1]}
           />
         )}
         {details.severity && (
@@ -453,8 +472,8 @@ function WeedExpandedDetails({
   details: WeedObservationDetails;
 }) {
   const weedName = getWeedDisplayName(details);
-  const sizeLabel = WEED_SIZE_OPTIONS[details.sizeScale - 1];
-  const densityLabel = WEED_DENSITY_OPTIONS[details.densityScale - 1];
+  const growthStageLabel = WEED_GROWTH_STAGE_LABELS[details.sizeScale - 1];
+  const amountLabel = WEED_AMOUNT_LABELS[details.densityScale - 1];
 
   return (
     <>
@@ -463,18 +482,10 @@ function WeedExpandedDetails({
         {details.weedCategoryLabel && (
           <DetailRow label="Type" value={details.weedCategoryLabel} />
         )}
-        {sizeLabel && (
-          <DetailRow
-            label="Size"
-            value={`${sizeLabel.label} — ${sizeLabel.subtitle}`}
-          />
+        {growthStageLabel && (
+          <DetailRow label="Growth stage" value={growthStageLabel} />
         )}
-        {densityLabel && (
-          <DetailRow
-            label="Density"
-            value={`${densityLabel.label} — ${densityLabel.subtitle}`}
-          />
-        )}
+        {amountLabel && <DetailRow label="Amount" value={amountLabel} />}
         {details.flaggedForFollowUp && (
           <DetailRow label="Follow up" value="Flagged" />
         )}
@@ -495,20 +506,68 @@ function MoistureExpandedDetails({
 }: {
   details: MoistureObservationDetails;
 }) {
+  const conditionLabel = PLANT_CONDITION_LABELS[details.plantConditionScale - 1];
+  const areaLabel = PLANT_AREA_AFFECTED_LABELS[details.areaAffectedScale - 1];
+
   return (
     <dl className="space-y-1.5 text-sm">
-      {details.readings.map((reading) => {
-        const depth = getMoistureDepth(reading.depthId);
-        const level = getMoistureLevelForValue(reading.level);
+      {details.includePlantCondition && conditionLabel && (
+        <DetailRow label="Plant condition" value={conditionLabel} />
+      )}
+      {details.includePlantCondition && areaLabel && (
+        <DetailRow label="Area affected" value={areaLabel} />
+      )}
+      {(details.includeSoilMoisture || details.readings.length > 0) &&
+        details.readings.map((reading) => {
+          const depth = getMoistureDepth(reading.depthId);
+          const level = getMoistureLevelForValue(reading.level);
 
-        return (
-          <DetailRow
-            key={reading.depthId}
-            label={depth?.label ?? reading.depthId}
-            value={`${level.label} — ${level.subtitle}`}
-          />
-        );
-      })}
+          return (
+            <DetailRow
+              key={reading.depthId}
+              label={depth?.label ?? reading.depthId}
+              value={`${level.label} — ${level.subtitle}`}
+            />
+          );
+        })}
+    </dl>
+  );
+}
+
+function PopulationCollapsedSummary({
+  details,
+}: {
+  details: PopulationObservationDetails;
+}) {
+  const density = formatPopulationDensity(details);
+
+  return density ? (
+    <p className="mt-0.5 text-sm text-muted">{density}</p>
+  ) : null;
+}
+
+function PopulationExpandedDetails({
+  details,
+}: {
+  details: PopulationObservationDetails;
+}) {
+  const density = formatPopulationDensity(details);
+  const methodLabel =
+    details.method === "square" ? "Square quadrat" : "10 m row";
+  const sampleLabel =
+    details.method === "square"
+      ? formatPopulationSquareLabel(details)
+      : `${details.rowLengthMeters} m row`;
+
+  return (
+    <dl className="space-y-1.5 text-sm">
+      <DetailRow label="Method" value={methodLabel} />
+      <DetailRow label="Sample size" value={sampleLabel} />
+      <DetailRow
+        label="Plant count"
+        value={`${details.plantCount} plant${details.plantCount === 1 ? "" : "s"}`}
+      />
+      {density && <DetailRow label="Density" value={density} />}
     </dl>
   );
 }
