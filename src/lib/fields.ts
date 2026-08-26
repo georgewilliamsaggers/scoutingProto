@@ -96,6 +96,24 @@ export const fields: Field[] = [
       { id: "sr-general-1", type: "general", label: "General activity", date: "2026-08-01", status: "upcoming", note: "Gateway repair at field entrance." },
     ],
   },
+  {
+    id: "willow-bottom",
+    name: "Willow Bottom",
+    hectares: 18.4,
+    crop: "Oilseed Rape",
+    variety: "DK Exalte",
+    plantingDate: "2025-09-02",
+    harvestDate: "2026-07-28",
+    nextScoutingDate: "2026-07-16",
+    nextInputDate: "2026-07-24",
+    overview:
+      "Lower-lying block with heavier soils and a willow belt on the east boundary. Canopy is dense. Watch the wet hollow for pest carry-over from neighbouring cereals.",
+    activities: [
+      { id: "wb-plant", type: "planting", label: "Planting", date: "2025-09-02", status: "completed", note: "Oilseed rape established into moisture." },
+      { id: "wb-scout-1", type: "scouting", label: "Scouting", date: "2026-03-12", status: "completed", note: "Even stem extension, light pollen beetle." },
+      { id: "wb-scout-2", type: "scouting", label: "Scouting", date: "2026-07-16", status: "due", note: "Check for aphids moving in from cereal neighbours." },
+    ],
+  },
 ];
 
 export function getFieldById(id: string): Field | undefined {

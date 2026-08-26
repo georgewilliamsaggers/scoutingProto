@@ -40,15 +40,17 @@ export function ObservationTypeBadge({
 export function ObservationIcon({
   type,
   className = "h-5 w-5",
+  colorClass,
 }: {
   type: ObservationType;
   className?: string;
+  colorClass?: string;
 }) {
   const config = getObservationTypeConfig(type);
 
   return (
     <svg
-      className={[className, config?.iconClass ?? "text-navy"].join(" ")}
+      className={[className, colorClass ?? config?.iconClass ?? "text-navy"].join(" ")}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
