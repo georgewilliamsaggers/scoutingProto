@@ -5,6 +5,7 @@ export type ObservationType =
   | "moisture"
   | "other"
   | "population"
+  | "post_spray"
   | "voice_note";
 
 export const OBSERVATION_TYPES: {
@@ -73,17 +74,17 @@ export const OBSERVATION_TYPES: {
     badgeClass: "bg-sky-400 text-white",
   },
   {
-    id: "other",
-    label: "Other",
-    supportText: "Capture a general observation",
-    emoji: "⋯",
+    id: "post_spray",
+    label: "Post spray",
+    supportText: "How did the crop respond?",
+    emoji: "💨",
     tileClass: "bg-surface-elevated active:bg-stone-50",
     borderClass: "border border-border/50",
-    iconContainerClass: "bg-stone-100",
-    accentClass: "bg-stone-200/70",
-    iconClass: "text-stone-600",
+    iconContainerClass: "bg-violet-50",
+    accentClass: "bg-violet-100/70",
+    iconClass: "text-violet-700",
     textClass: "text-navy",
-    badgeClass: "bg-stone-400 text-white",
+    badgeClass: "bg-violet-400 text-white",
   },
   {
     id: "population",
@@ -97,6 +98,19 @@ export const OBSERVATION_TYPES: {
     iconClass: "text-amber-700",
     textClass: "text-navy",
     badgeClass: "bg-amber-400 text-white",
+  },
+  {
+    id: "other",
+    label: "Other",
+    supportText: "Capture a general observation",
+    emoji: "⋯",
+    tileClass: "bg-surface-elevated active:bg-stone-50",
+    borderClass: "border border-border/50",
+    iconContainerClass: "bg-stone-100",
+    accentClass: "bg-stone-200/70",
+    iconClass: "text-stone-600",
+    textClass: "text-navy",
+    badgeClass: "bg-stone-400 text-white",
   },
   {
     id: "voice_note",
@@ -174,6 +188,7 @@ export const OBSERVATION_MAP_COLORS: Record<ObservationType, string> = {
   moisture: "#0284c7",
   other: "#64748b",
   population: "#d97706",
+  post_spray: "#7c3aed",
   voice_note: "#4f46e5",
 };
 

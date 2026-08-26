@@ -11,6 +11,7 @@ import { ObservationMapOverlay } from "@/components/ObservationMapOverlay";
 import { LogObservationSheet } from "@/components/LogObservationSheet";
 import { ObservationLogPage } from "@/components/ObservationLogPage";
 import { ObservationIcon } from "@/components/ObservationTypeIcon";
+import { useAppHeader } from "@/components/AppHeaderContext";
 import { VoiceNoteOverlay } from "@/components/VoiceNoteOverlay";
 import { useScopeBriefOptional } from "@/components/ScopeBriefContext";
 import { Field } from "@/lib/fields";
@@ -41,6 +42,7 @@ export function ScoutingSessionView({
   onEndSession,
 }: ScoutingSessionViewProps) {
   const scopeBrief = useScopeBriefOptional();
+  const { setHeaderConfig } = useAppHeader();
 
   const [observations, setObservations] = useState<ScoutingObservation[]>([]);
   const [sessionKey, setSessionKey] = useState(0);
@@ -97,6 +99,13 @@ export function ScoutingSessionView({
     scopeBrief,
     weedFlowOpen,
   ]);
+
+  useEffect(() => {
+    setHeaderConfig({
+      title: activePage === 1 ? "Field log" : "Log an observation",
+      showBack: false,
+    });
+  }, [activePage, setHeaderConfig]);
 
   useEffect(() => {
     const start = Date.now();
@@ -259,13 +268,11 @@ export function ScoutingSessionView({
             onScroll={handlePageScroll}
             className="flex min-h-0 flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
-            <main className="relative z-10 flex h-full min-h-0 w-full shrink-0 snap-start touch-pan-y flex-col px-7 pt-4 pb-3">
-              <h2 className="mb-4 shrink-0 text-[1.625rem] font-bold leading-tight text-navy">
-                Log an observation
-              </h2>
-
+            <main className="relative z-10 flex h-full min-h-0 w-full shrink-0 snap-start touch-pan-y flex-col px-7 pt-3 pb-3">
               <div className="flex min-h-0 flex-1 flex-col gap-3.5">
-                {[0, 1, 2].map((rowIndex) => {
+                {Array.from(
+                  { length: Math.ceil(LOG_OBSERVATION_TILE_TYPES.length / 2) },
+                  (_, rowIndex) => {
                   const rowTiles = LOG_OBSERVATION_TILE_TYPES.slice(
                     rowIndex * 2,
                     rowIndex * 2 + 2
@@ -273,14 +280,22 @@ export function ScoutingSessionView({
 
                   if (rowTiles.length === 0) return null;
 
+                  const isCompactRow = rowTiles.every(
+                    (tile) => tile.id === "other"
+                  );
+
                   return (
                   <div
                     key={rowIndex}
-                    className="grid min-h-0 flex-1 grid-cols-2 gap-3"
+                    className={[
+                      "grid grid-cols-2 gap-3",
+                      isCompactRow ? "shrink-0" : "min-h-0 flex-1",
+                    ].join(" ")}
                   >
                     {rowTiles.map(
                       (observation) => {
                         const count = observationCounts[observation.id] ?? 0;
+                        const isCompact = observation.id === "other";
 
                         return (
                           <button
@@ -289,7 +304,10 @@ export function ScoutingSessionView({
                             onPointerDown={(event) => event.stopPropagation()}
                             onClick={() => handleObservationSelect(observation.id)}
                             className={[
-                              "relative flex h-full min-h-0 cursor-pointer touch-manipulation flex-col overflow-hidden rounded-2xl p-4 text-left shadow-sm transition-all active:scale-[0.98] active:shadow-md",
+                              "relative flex min-h-0 cursor-pointer touch-manipulation overflow-hidden rounded-2xl text-left shadow-sm transition-all active:scale-[0.98] active:shadow-md",
+                              isCompact
+                                ? "items-center gap-3 px-4 py-3"
+                                : "h-full flex-col p-4",
                               observation.tileClass,
                               observation.borderClass,
                               rowTiles.length === 1 ? "col-span-2" : "",
@@ -298,7 +316,10 @@ export function ScoutingSessionView({
                             {count > 0 && (
                               <span
                                 className={[
-                                  "pointer-events-none absolute right-3 top-3 z-10 flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-xs font-bold",
+                                  "pointer-events-none z-10 flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-xs font-bold",
+                                  isCompact
+                                    ? "relative ml-auto shrink-0"
+                                    : "absolute right-3 top-3",
                                   observation.badgeClass,
                                 ].join(" ")}
                               >
@@ -307,7 +328,8 @@ export function ScoutingSessionView({
                             )}
                             <span
                               className={[
-                                "pointer-events-none relative z-10 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl",
+                                "pointer-events-none relative z-10 inline-flex shrink-0 items-center justify-center rounded-xl text-xl",
+                                isCompact ? "h-9 w-9" : "h-10 w-10",
                                 observation.iconContainerClass,
                               ].join(" ")}
                             >
@@ -318,7 +340,14 @@ export function ScoutingSessionView({
                                 />
                               )}
                             </span>
-                            <span className="pointer-events-none relative z-10 mt-3">
+                            <span
+                              className={[
+                                "pointer-events-none relative z-10 min-w-0",
+                                isCompact
+                                  ? "flex flex-1 items-baseline gap-2"
+                                  : "mt-3",
+                              ].join(" ")}
+                            >
                               <span
                                 className={[
                                   "block text-[0.9375rem] font-bold leading-tight",
@@ -328,14 +357,24 @@ export function ScoutingSessionView({
                                 {observation.label}
                               </span>
                               {observation.supportText && (
-                                <span className="mt-1 block text-xs leading-snug text-muted">
+                                <span
+                                  className={[
+                                    "text-xs leading-snug text-muted",
+                                    isCompact
+                                      ? "min-w-0 truncate"
+                                      : "mt-1 block",
+                                  ].join(" ")}
+                                >
                                   {observation.supportText}
                                 </span>
                               )}
                             </span>
                             <span
                               className={[
-                                "pointer-events-none absolute -bottom-5 -right-5 z-0 h-20 w-20 rounded-full",
+                                "pointer-events-none absolute z-0 rounded-full",
+                                isCompact
+                                  ? "-bottom-4 -right-4 h-14 w-14"
+                                  : "-bottom-5 -right-5 h-20 w-20",
                                 observation.accentClass,
                               ].join(" ")}
                               aria-hidden="true"

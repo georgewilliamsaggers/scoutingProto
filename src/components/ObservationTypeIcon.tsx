@@ -119,6 +119,15 @@ const observationIconPaths: Record<ObservationType, React.ReactNode> = {
       <path d="M16 16v-4" />
     </>
   ),
+  post_spray: (
+    <>
+      <path d="M6 13h5v8H6z" />
+      <path d="M8.5 13V8h5.5" />
+      <path d="M14 6.5V10h4" />
+      <path d="M18.5 5.5c2 2 2 5.5 0 7.5" />
+      <path d="M16.5 7.5c1 1 1 3 0 4" />
+    </>
+  ),
   voice_note: (
     <>
       <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />

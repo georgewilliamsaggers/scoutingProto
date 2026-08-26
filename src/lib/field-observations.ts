@@ -446,6 +446,7 @@ export function countObservationTypes(observations: ScoutingObservation[]) {
     weed: 0,
     moisture: 0,
     population: 0,
+    post_spray: 0,
     other: 0,
     voice_note: 0,
   };

@@ -67,9 +67,8 @@ export function ScoutingSection() {
     }
 
     if (screen.name === "session") {
-      const field = getFieldById(screen.fieldId);
       setHeaderConfig({
-        title: field?.name ?? "Scouting",
+        title: "Log an observation",
         showBack: false,
       });
     }

@@ -61,8 +61,7 @@ export function ObservationLogPage({
 
   return (
     <div className="flex h-full flex-col px-7 pt-3 pb-4">
-      <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
-        <h2 className="text-[1.625rem] font-bold leading-tight text-navy">Field log</h2>
+      <div className="mb-3 flex shrink-0 items-center justify-end gap-3">
         <button
           type="button"
           onClick={onOpenMap}
@@ -74,11 +73,7 @@ export function ObservationLogPage({
         </button>
       </div>
 
-      {observations.length === 0 ? (
-        <p className="text-sm text-muted">
-          Observations you log during this session will appear here.
-        </p>
-      ) : (
+      {observations.length > 0 && (
         <div className="min-h-0 flex-1 overflow-y-auto -mx-1 px-1">
           <div className="space-y-5 pb-2">
             {groupedObservations.map((group) => (
