@@ -1,8 +1,8 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { AgOSLogo } from "@/components/AgOSLogo";
 import { MobileShell } from "@/components/MobileShell";
 import {
   DEMO_EMAIL,
@@ -37,7 +37,14 @@ export default function LoginPage() {
       <div className="flex flex-1 flex-col px-7 pb-8 pt-10">
         {/* Logo */}
         <div className="mb-6 flex justify-center">
-          <AgOSLogo variant="image" size="small" />
+          <Image
+            src="/farmx-logo.png"
+            alt="FARMX Agri Intel"
+            width={200}
+            height={200}
+            priority
+            className="h-auto w-[200px] shrink-0 rounded-2xl object-contain shadow-[0_12px_32px_-12px_rgba(10,40,50,0.45)]"
+          />
         </div>
 
         {/* Welcome copy */}

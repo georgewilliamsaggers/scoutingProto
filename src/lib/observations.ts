@@ -121,6 +121,42 @@ export function getObservationLabel(type: ObservationType): string {
   return OBSERVATION_TYPES.find((entry) => entry.id === type)?.label ?? "Observation";
 }
 
+export function getObservationTaxonomyTitle(observation: ScoutingObservation): string {
+  if (observation.type === "pest" && observation.pestDetails) {
+    return getPestDisplayName(observation.pestDetails);
+  }
+
+  if (observation.type === "disease" && observation.diseaseDetails) {
+    const details = observation.diseaseDetails;
+    const group = details.diseaseCategoryLabel.trim();
+    const specific = details.diseaseSpecificTypeId
+      ? getDiseaseSpecificType(details.diseaseSpecificTypeId)?.label
+      : undefined;
+
+    if (group && specific && specific.toLowerCase() !== group.toLowerCase()) {
+      return `${group} · ${specific}`;
+    }
+    if (group) return group;
+    if (specific) return specific;
+    return getDiseaseDisplayName(details);
+  }
+
+  if (observation.type === "weed" && observation.weedDetails) {
+    return getWeedDisplayName(observation.weedDetails);
+  }
+
+  return getObservationLabel(observation.type);
+}
+
+export function getReviewStatusChip(status?: ObservationReviewStatus): {
+  label: string;
+  tone: ObservationReviewStatus;
+} {
+  if (status === "agreed") return { label: "Checked", tone: "agreed" };
+  if (status === "changed") return { label: "Checked modified", tone: "changed" };
+  return { label: "Unchecked", tone: "pending" };
+}
+
 export type ObservationFilter = ObservationType | "all";
 
 export const OBSERVATION_FILTER_OPTIONS: {
@@ -166,6 +202,12 @@ export const FIELD_MAP_BOUNDS: Record<string, FieldMapBounds> = {
     spanLat: 0.0036,
     spanLng: 0.0052,
   },
+  "willow-bottom": {
+    centerLat: 52.0930,
+    centerLng: -0.5050,
+    spanLat: 0.0038,
+    spanLng: 0.0056,
+  },
 };
 
 const DEFAULT_FIELD_MAP_BOUNDS = FIELD_MAP_BOUNDS["north-meadow"];
@@ -202,7 +244,39 @@ export function observationLocationToMapPoint(
   location: ObservationLocation,
   fieldId: string
 ): { x: number; y: number } {
-  const bounds = getFieldMapBounds(fieldId);
+  return locationToBoundsPoint(location, getFieldMapBounds(fieldId));
+}
+
+export function getFarmMapBounds(fieldIds: string[]): FieldMapBounds {
+  const selected = (fieldIds.length > 0 ? fieldIds : Object.keys(FIELD_MAP_BOUNDS)).map(
+    getFieldMapBounds
+  );
+  const minLat = Math.min(...selected.map((b) => b.centerLat - b.spanLat / 2));
+  const maxLat = Math.max(...selected.map((b) => b.centerLat + b.spanLat / 2));
+  const minLng = Math.min(...selected.map((b) => b.centerLng - b.spanLng / 2));
+  const maxLng = Math.max(...selected.map((b) => b.centerLng + b.spanLng / 2));
+  const spanLat = Math.max(0.006, (maxLat - minLat) * 1.35);
+  const spanLng = Math.max(0.008, (maxLng - minLng) * 1.35);
+
+  return {
+    centerLat: (minLat + maxLat) / 2,
+    centerLng: (minLng + maxLng) / 2,
+    spanLat,
+    spanLng,
+  };
+}
+
+export function locationToFarmMapPoint(
+  location: ObservationLocation,
+  fieldIds: string[]
+): { x: number; y: number } {
+  return locationToBoundsPoint(location, getFarmMapBounds(fieldIds));
+}
+
+function locationToBoundsPoint(
+  location: ObservationLocation,
+  bounds: FieldMapBounds
+): { x: number; y: number } {
   const minLng = bounds.centerLng - bounds.spanLng / 2;
   const maxLat = bounds.centerLat + bounds.spanLat / 2;
 
@@ -1515,12 +1589,18 @@ export function formatVoiceNoteSummary(details: VoiceNoteDetails): string {
   return `Voice note · ${duration}${imageSuffix}`;
 }
 
+export type ObservationReviewStatus = "pending" | "agreed" | "changed";
+
 export interface ScoutingObservation {
   id: string;
   type: ObservationType;
   note: string;
   createdAt: string;
   fieldId?: string;
+  sessionId?: string;
+  reviewStatus?: ObservationReviewStatus;
+  important?: boolean;
+  changeComment?: string;
   location?: ObservationLocation;
   diseaseDetails?: DiseaseObservationDetails;
   pestDetails?: PestObservationDetails;
