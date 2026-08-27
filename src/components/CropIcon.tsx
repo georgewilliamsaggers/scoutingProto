@@ -14,10 +14,14 @@ export function getCropType(crop: string): CropType {
 
   if (lower.includes("wheat")) return "wheat";
   if (lower.includes("barley")) return "barley";
-  if (lower.includes("soy")) return "soy";
+  if (lower.includes("soy") || lower.includes("groundnut") || lower.includes("peanut")) {
+    return "soy";
+  }
   if (lower.includes("corn") || lower.includes("maize")) return "corn";
-  if (lower.includes("rape") || lower.includes("canola")) return "rapeseed";
-  if (lower.includes("oat")) return "oats";
+  if (lower.includes("rape") || lower.includes("canola") || lower.includes("citrus")) {
+    return "rapeseed";
+  }
+  if (lower.includes("oat") || lower.includes("onion")) return "oats";
 
   return "default";
 }

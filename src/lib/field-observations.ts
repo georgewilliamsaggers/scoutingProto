@@ -86,7 +86,7 @@ const MOCK_FIELD_OBSERVATIONS: ScoutingObservation[] = [
     createdAt: "2026-08-05T09:15:00.000Z",
     fieldId: "north-meadow",
     sessionId: "session-nm-0805",
-    diseaseDetails: mockDisease("rust", "stripe_rust"),
+    diseaseDetails: mockDisease("stripe_rust"),
   },
   {
     id: "hist-nm-2",
@@ -95,7 +95,7 @@ const MOCK_FIELD_OBSERVATIONS: ScoutingObservation[] = [
     createdAt: "2026-07-28T14:40:00.000Z",
     fieldId: "north-meadow",
     sessionId: "session-nm-0728",
-    pestDetails: mockPest("aphids", "grain_aphid"),
+    pestDetails: mockPest("aphids", "cereal_aphids"),
   },
   {
     id: "hist-nm-3",
@@ -104,7 +104,7 @@ const MOCK_FIELD_OBSERVATIONS: ScoutingObservation[] = [
     createdAt: "2026-07-22T11:05:00.000Z",
     fieldId: "north-meadow",
     sessionId: "session-nm-0722",
-    weedDetails: mockWeed("grass", "black_grass"),
+    weedDetails: mockWeed("grass", "johnson_grass"),
   },
   {
     id: "hist-nm-4",
@@ -144,7 +144,7 @@ const MOCK_FIELD_OBSERVATIONS: ScoutingObservation[] = [
     createdAt: "2026-08-10T10:00:00.000Z",
     fieldId: "south-ridge",
     sessionId: "session-sr-0810",
-    pestDetails: mockPest("beetles", "flea_beetle"),
+    pestDetails: mockPest("beetles", "cereal_leaf_beetle"),
   },
   {
     id: "hist-sr-2",
@@ -153,7 +153,7 @@ const MOCK_FIELD_OBSERVATIONS: ScoutingObservation[] = [
     createdAt: "2026-08-02T13:25:00.000Z",
     fieldId: "south-ridge",
     sessionId: "session-sr-0802",
-    diseaseDetails: mockDisease("rhynchosporium"),
+    diseaseDetails: mockDisease("net_blotch"),
   },
   {
     id: "hist-sr-3",
@@ -162,7 +162,7 @@ const MOCK_FIELD_OBSERVATIONS: ScoutingObservation[] = [
     createdAt: "2026-07-30T09:50:00.000Z",
     fieldId: "south-ridge",
     sessionId: "session-sr-0730",
-    weedDetails: mockWeed("broadleaf", "chickweed"),
+    weedDetails: mockWeed("broadleaf", "blackjack"),
   },
   {
     id: "hist-sr-4",
@@ -202,7 +202,7 @@ const MOCK_FIELD_OBSERVATIONS: ScoutingObservation[] = [
     fieldId: "north-meadow",
     sessionId: "session-nm-0818",
     important: true,
-    pestDetails: mockPest("aphids", "grain_aphid"),
+    pestDetails: mockPest("aphids", "cereal_aphids"),
   },
   {
     id: "hist-sr-7",
@@ -211,7 +211,7 @@ const MOCK_FIELD_OBSERVATIONS: ScoutingObservation[] = [
     createdAt: "2026-08-19T09:40:00.000Z",
     fieldId: "south-ridge",
     sessionId: "session-sr-0819",
-    pestDetails: mockPest("aphids", "grain_aphid"),
+    pestDetails: mockPest("aphids", "cereal_aphids"),
   },
   {
     id: "hist-wb-1",
@@ -221,7 +221,7 @@ const MOCK_FIELD_OBSERVATIONS: ScoutingObservation[] = [
     fieldId: "willow-bottom",
     sessionId: "session-wb-0820",
     important: true,
-    pestDetails: mockPest("aphids", "grain_aphid"),
+    pestDetails: mockPest("aphids", "cereal_aphids"),
   },
   {
     id: "hist-wb-2",
@@ -230,7 +230,7 @@ const MOCK_FIELD_OBSERVATIONS: ScoutingObservation[] = [
     createdAt: "2026-08-12T15:05:00.000Z",
     fieldId: "willow-bottom",
     sessionId: "session-wb-0812",
-    pestDetails: mockPest("beetles", "blossom_beetle"),
+    pestDetails: mockPest("beetles", "stink_bugs"),
   },
   {
     id: "hist-wb-3",
@@ -239,7 +239,7 @@ const MOCK_FIELD_OBSERVATIONS: ScoutingObservation[] = [
     createdAt: "2026-08-08T12:30:00.000Z",
     fieldId: "willow-bottom",
     sessionId: "session-wb-0808",
-    diseaseDetails: mockDisease("sclerotinia"),
+    diseaseDetails: mockDisease("soybean_rust"),
   },
   {
     id: "hist-wb-4",
@@ -248,7 +248,7 @@ const MOCK_FIELD_OBSERVATIONS: ScoutingObservation[] = [
     createdAt: "2026-07-29T08:55:00.000Z",
     fieldId: "willow-bottom",
     sessionId: "session-wb-0729",
-    weedDetails: mockWeed("broadleaf", "cleavers"),
+    weedDetails: mockWeed("broadleaf", "pigweed"),
   },
   {
     id: "hist-wb-5",
@@ -267,7 +267,7 @@ const MOCK_FIELD_OBSERVATIONS: ScoutingObservation[] = [
     sessionId: "session-nm-0818",
     reviewStatus: "changed",
     changeComment: "Pressure is higher on the tramline than first logged.",
-    diseaseDetails: mockDisease("rust", "stripe_rust"),
+    diseaseDetails: mockDisease("stripe_rust"),
   },
   {
     id: "hist-nm-9",
@@ -276,7 +276,7 @@ const MOCK_FIELD_OBSERVATIONS: ScoutingObservation[] = [
     createdAt: "2026-08-18T11:45:00.000Z",
     fieldId: "north-meadow",
     sessionId: "session-nm-0818",
-    weedDetails: mockWeed("grass", "black_grass"),
+    weedDetails: mockWeed("grass", "johnson_grass"),
   },
   {
     id: "hist-nm-10",
@@ -301,7 +301,7 @@ const MOCK_FIELD_OBSERVATIONS: ScoutingObservation[] = [
     createdAt: "2026-08-05T08:50:00.000Z",
     fieldId: "north-meadow",
     sessionId: "session-nm-0805",
-    pestDetails: mockPest("aphids", "rose_grain_aphid"),
+    pestDetails: mockPest("aphids", "cereal_aphids"),
   },
   {
     id: "hist-nm-13",
@@ -310,7 +310,7 @@ const MOCK_FIELD_OBSERVATIONS: ScoutingObservation[] = [
     createdAt: "2026-08-05T10:40:00.000Z",
     fieldId: "north-meadow",
     sessionId: "session-nm-0805",
-    weedDetails: mockWeed("broadleaf", "cleavers"),
+    weedDetails: mockWeed("broadleaf", "pigweed"),
   },
   {
     id: "hist-nm-14",
@@ -328,7 +328,7 @@ const MOCK_FIELD_OBSERVATIONS: ScoutingObservation[] = [
     fieldId: "south-ridge",
     sessionId: "session-sr-0819",
     important: true,
-    diseaseDetails: mockDisease("rhynchosporium"),
+    diseaseDetails: mockDisease("net_blotch"),
   },
   {
     id: "hist-sr-9",
@@ -354,7 +354,7 @@ const MOCK_FIELD_OBSERVATIONS: ScoutingObservation[] = [
     createdAt: "2026-08-10T09:35:00.000Z",
     fieldId: "south-ridge",
     sessionId: "session-sr-0810",
-    diseaseDetails: mockDisease("leaf_blotch", "net_blotch"),
+    diseaseDetails: mockDisease("net_blotch"),
   },
   {
     id: "hist-sr-12",
@@ -380,7 +380,7 @@ const MOCK_FIELD_OBSERVATIONS: ScoutingObservation[] = [
     createdAt: "2026-08-20T09:40:00.000Z",
     fieldId: "willow-bottom",
     sessionId: "session-wb-0820",
-    diseaseDetails: mockDisease("sclerotinia"),
+    diseaseDetails: mockDisease("soybean_rust"),
   },
   {
     id: "hist-wb-7",
@@ -389,7 +389,7 @@ const MOCK_FIELD_OBSERVATIONS: ScoutingObservation[] = [
     createdAt: "2026-08-20T11:05:00.000Z",
     fieldId: "willow-bottom",
     sessionId: "session-wb-0820",
-    weedDetails: mockWeed("broadleaf", "cleavers"),
+    weedDetails: mockWeed("broadleaf", "pigweed"),
   },
   {
     id: "hist-wb-8",
